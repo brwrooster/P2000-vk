@@ -460,6 +460,12 @@ function renderUnits(units){
 
 let selectedPrio = 2;
 let map, startMarker, incMarker, routeLine;
+let routeBounds=null, mapObserver=null;
+function fitToRoute(){
+  if(!map||!routeBounds) return;
+  map.invalidateSize();
+  map.fitBounds(routeBounds,{padding:[30,30],maxZoom:14});
+}
 let alarmTimer = null;
 let alarmTick = null;
 let startCoords = { ...START_COORDS };
@@ -545,9 +551,9 @@ async function loadRoute(dest){
     if(routeLine) routeLine.remove();
     const latlngs=route.geometry.coordinates.map(c=>[c[1],c[0]]);
     routeLine=L.polyline(latlngs,{color:'#1565c0',weight:5,opacity:.9}).addTo(map);
-    const fit=()=>{ map.invalidateSize(); map.fitBounds(routeLine.getBounds(),{padding:[30,30],maxZoom:14}); };
-    fit();
-    setTimeout(fit,200);
+    routeBounds=routeLine.getBounds();
+    fitToRoute();
+    setTimeout(fitToRoute,250);
   }catch(e){
     document.getElementById('routeTime').textContent='n.b.';
     document.getElementById('routeDist').textContent='n.b.';
@@ -565,6 +571,10 @@ function initMap(dest){
     map=L.map('map',{zoomControl:false,attributionControl:false}).setView([dest.lat,dest.lon],13);
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
       {maxZoom:19,subdomains:'abcd'}).addTo(map);
+    if('ResizeObserver' in window){
+      mapObserver=new ResizeObserver(()=>fitToRoute());
+      mapObserver.observe(document.getElementById('map'));
+    }
   }
   if(startMarker) startMarker.remove();
   if(incMarker) incMarker.remove();
