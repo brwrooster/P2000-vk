@@ -111,6 +111,12 @@
     font-family:'Roboto Mono',monospace;letter-spacing:.02em;
   }
   .weather .sep{display:none}
+  .last-run{
+    color:var(--muted);opacity:.7;
+    font-family:'Roboto Mono',monospace;letter-spacing:.04em;
+    font-size:clamp(.72rem,1.5vh,.95rem);
+  }
+  .last-run:empty{display:none}
 
   /* ---------- ALARM ---------- */
   .alarm{display:none;flex:1;flex-direction:column}
@@ -315,7 +321,7 @@
     </div>
     <div class="status">
       <span class="dot" id="connDot"></span>
-      <span id="connText">Geen actieve melding</span>
+      <span id="connText">Verbonden</span>
     </div>
   </header>
 
@@ -333,6 +339,7 @@
         <div class="wind" id="wxWind">Almere</div>
       </div>
     </div>
+    <div class="last-run" id="lastRun"></div>
   </section>
 
   <!-- Alarmweergave -->
@@ -510,13 +517,49 @@ async function loadWeather(){
     document.getElementById('wxCond').textContent=txt;
     document.getElementById('wxWind').textContent=
       `Wind ${windDir(c.wind_direction_10m)} ${Math.round(c.wind_speed_10m)} km/u · Almere`;
+    setConn(true);
   }catch(e){
     document.getElementById('wxCond').textContent='Weer niet beschikbaar';
     document.getElementById('wxWind').textContent='Almere';
+    setConn(false);
   }
 }
 loadWeather();
 setInterval(loadWeather,15*60*1000);
+
+/* ================= Verbindingsindicator ================= */
+function setConn(ok){
+  const online = ok && navigator.onLine;
+  document.getElementById('connDot').style.background = online ? 'var(--ok)' : 'var(--prio1)';
+  document.getElementById('connText').textContent = online ? 'Verbonden' : 'Geen verbinding';
+}
+window.addEventListener('online',()=>setConn(true));
+window.addEventListener('offline',()=>setConn(false));
+setConn(navigator.onLine);
+
+/* ================= Laatste uitruk ================= */
+function saveLastAlarm(rec){
+  try{ localStorage.setItem('p2000_last', JSON.stringify(rec)); }catch(e){}
+  renderLastRun();
+}
+function renderLastRun(){
+  let rec=null;
+  try{ rec=JSON.parse(localStorage.getItem('p2000_last')); }catch(e){}
+  const el=document.getElementById('lastRun');
+  if(!rec||!rec.ts){ el.textContent=''; return; }
+  const d=new Date(rec.ts), now=new Date();
+  const p=n=>String(n).padStart(2,'0');
+  const sameDay=d.toDateString()===now.toDateString();
+  const tijd=p(d.getHours())+':'+p(d.getMinutes());
+  const wanneer=sameDay?tijd:d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'})+' '+tijd;
+  const parts=['Laatste melding'];
+  if(rec.type) parts.push(rec.type);
+  if(rec.addr) parts.push(rec.addr);
+  if(rec.units && rec.units.length) parts.push(rec.units.join(', '));
+  parts.push(wanneer);
+  el.textContent=parts.join(' · ');
+}
+renderLastRun();
 
 /* ================= Geocoding (PDOK Locatieserver) ================= */
 async function geocode(q){
@@ -595,7 +638,8 @@ async function showAlarm(type,addr,prio,unitsStr){
 
   document.getElementById('prioLabel').textContent='Prioriteit '+prio;
   document.getElementById('incidentType').textContent=type||'Melding';
-  renderUnits(parseUnits(unitsStr));
+  const unitList=parseUnits(unitsStr);
+  renderUnits(unitList);
   const t0=Date.now();
   document.getElementById('alarmWhen').textContent='00:00';
   clearInterval(alarmTick);
@@ -604,10 +648,9 @@ async function showAlarm(type,addr,prio,unitsStr){
     document.getElementById('alarmWhen').textContent=
       String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
   },1000);
-  document.getElementById('connText').textContent='Actieve melding';
-  document.getElementById('connDot').style.background='var(--prio'+prio+')';
 
   // adres tonen (voorlopig ruwe invoer, daarna verrijkt)
+  let lastAddr=addr;
   document.getElementById('incidentStreet').textContent=addr;
   document.getElementById('incidentPlace').textContent='Locatie opzoeken…';
 
@@ -618,9 +661,11 @@ async function showAlarm(type,addr,prio,unitsStr){
   }
   if(geo){
     // label opsplitsen in straat / plaats waar mogelijk
-    document.getElementById('incidentStreet').textContent=geo.label.split(',')[0];
-    document.getElementById('incidentPlace').textContent=
-      geo.label.split(',').slice(1).join(',').trim()||'Almere';
+    const street=geo.label.split(',')[0];
+    const place=geo.label.split(',').slice(1).join(',').trim()||'Almere';
+    document.getElementById('incidentStreet').textContent=street;
+    document.getElementById('incidentPlace').textContent=place;
+    lastAddr=street+', '+place;
     initMap({lat:geo.lat,lon:geo.lon});
     loadRoute({lat:geo.lat,lon:geo.lon});
   }else{
@@ -630,6 +675,7 @@ async function showAlarm(type,addr,prio,unitsStr){
     document.getElementById('routeBadge').classList.remove('loading');
   }
 
+  saveLastAlarm({ts:t0, type:type||'Melding', addr:lastAddr, units:unitList.map(u=>u.name)});
   clearTimeout(alarmTimer);
   alarmTimer=setTimeout(clearAlarm,ALARM_TIMEOUT_MS);
 }
@@ -638,8 +684,6 @@ function clearAlarm(){
   clearInterval(alarmTick);
   const screen=document.getElementById('screen');
   screen.classList.remove('is-alarm','prio-1','prio-2');
-  document.getElementById('connText').textContent='Geen actieve melding';
-  document.getElementById('connDot').style.background='var(--ok)';
 }
 
 /* ================= Testpaneel ================= */
