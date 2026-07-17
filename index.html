@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>P2000 · Post Veluwsekant</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<style>
+  :root{
+    --bg:#0a0f1a;
+    --panel:#111a2b;
+    --panel-2:#0e1524;
+    --line:#20304a;
+    --text:#eaf1fa;
+    --muted:#8395ad;
+    --brand:#e30613;
+    --prio1:#ff3b30;
+    --prio2:#ffc400;
+    --accent:#3ec1ff;
+    --ok:#37d67a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  #screen{
+    position:relative;
+    width:100vw;height:100vh;
+    display:flex;flex-direction:column;
+  }
+
+  /* ---------- Topbalk ---------- */
+  .topbar{
+    display:flex;align-items:center;gap:.9rem;
+    padding:clamp(.9rem,2.2vh,1.6rem) clamp(1.2rem,3vw,2.4rem);
+    border-bottom:1px solid var(--line);
+    flex:0 0 auto;
+    transition:background .4s ease, border-color .4s ease;
+  }
+  .mark{
+    width:clamp(30px,3.8vh,48px);height:clamp(30px,3.8vh,48px);
+    border-radius:7px;overflow:hidden;flex:0 0 auto;cursor:pointer;
+    display:block;box-shadow:0 0 0 1px rgba(255,255,255,.1);
+    -webkit-tap-highlight-color:transparent;
+  }
+  .mark svg{width:100%;height:100%;display:block}
+  .post-id{display:flex;flex-direction:column;line-height:1.05}
+  .post-id .name{
+    font-family:'Oswald',sans-serif;font-weight:600;
+    letter-spacing:.06em;text-transform:uppercase;
+    font-size:clamp(1.05rem,2.5vh,1.7rem);
+  }
+  .post-id .sub{
+    color:var(--muted);font-size:clamp(.68rem,1.4vh,.9rem);
+    letter-spacing:.16em;text-transform:uppercase;margin-top:.15rem;
+  }
+  .topbar .status{
+    margin-left:auto;display:flex;align-items:center;gap:.55rem;
+    color:var(--muted);font-size:clamp(.72rem,1.5vh,.95rem);
+    font-family:'Roboto Mono',monospace;letter-spacing:.04em;
+  }
+  .dot{width:.6rem;height:.6rem;border-radius:50%;background:var(--ok)}
+
+  /* ---------- IDLE ---------- */
+  .idle{
+    flex:1;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    gap:clamp(1.4rem,4vh,3rem);padding:2rem;
+  }
+  .duty{
+    font-family:'Oswald',sans-serif;font-weight:600;
+    text-transform:uppercase;letter-spacing:.22em;
+    color:var(--accent);font-size:clamp(1.6rem,4.5vh,3.2rem);
+  }
+  .clock{
+    font-family:'Roboto Mono',monospace;font-weight:500;
+    font-size:clamp(4rem,20vh,15rem);line-height:.9;
+    letter-spacing:.02em;
+    font-variant-numeric:tabular-nums;
+  }
+  .clock .sec{color:var(--accent)}
+  .date{
+    font-family:'Oswald',sans-serif;font-weight:400;
+    text-transform:uppercase;letter-spacing:.22em;
+    color:var(--muted);font-size:clamp(.9rem,2.4vh,1.6rem);
+  }
+  .weather{
+    display:flex;align-items:center;gap:clamp(.7rem,2.2vw,1.4rem);
+    color:var(--muted);flex-wrap:wrap;justify-content:center;
+  }
+  .weather .glyph{font-size:clamp(1.6rem,4vh,2.4rem);line-height:1}
+  .weather .temp{
+    font-family:'Roboto Mono',monospace;font-weight:500;color:var(--text);
+    font-size:clamp(1.5rem,4vh,2.4rem);line-height:1;
+  }
+  .weather .wx-meta{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap}
+  .weather .cond{font-size:clamp(.95rem,2.2vh,1.3rem);font-weight:500;color:var(--text)}
+  .weather .wind{
+    color:var(--muted);font-size:clamp(.82rem,1.7vh,1.05rem);
+    font-family:'Roboto Mono',monospace;letter-spacing:.02em;
+  }
+  .weather .sep{display:none}
+
+  /* ---------- ALARM ---------- */
+  .alarm{display:none;flex:1;flex-direction:column}
+  #screen.is-alarm .idle{display:none}
+  #screen.is-alarm .alarm{display:flex}
+  #screen.is-alarm .topbar{background:var(--panel-2)}
+
+  .alarm-strip{
+    flex:0 0 auto;display:flex;align-items:center;gap:1rem;
+    padding:clamp(.6rem,1.6vh,1rem) clamp(1.2rem,3vw,2.4rem);
+    font-family:'Oswald',sans-serif;font-weight:700;
+    text-transform:uppercase;letter-spacing:.14em;
+    font-size:clamp(1rem,2.8vh,1.9rem);
+    color:#0a0f1a;
+  }
+  .alarm-strip .when{
+    margin-left:auto;font-family:'Roboto Mono',monospace;
+    font-weight:500;letter-spacing:.02em;font-size:.8em;
+  }
+  #screen.prio-1 .alarm-strip{background:var(--prio1)}
+  #screen.prio-2 .alarm-strip{background:var(--prio2)}
+
+  .alarm-body{flex:1;display:flex;min-height:0}
+  .alarm-main{
+    flex:1;display:flex;flex-direction:column;justify-content:center;
+    gap:clamp(1rem,3vh,2rem);padding:clamp(1.4rem,4vw,3.4rem);min-width:0;
+  }
+  .eyebrow{
+    font-family:'Oswald',sans-serif;text-transform:uppercase;
+    letter-spacing:.24em;color:var(--muted);
+    font-size:clamp(.75rem,1.7vh,1.1rem);
+  }
+  .incident{
+    font-family:'Oswald',sans-serif;font-weight:700;
+    text-transform:uppercase;line-height:.94;
+    font-size:clamp(2.6rem,9.5vh,7rem);
+    word-break:break-word;
+  }
+  #screen.prio-1 .incident{color:var(--prio1)}
+  #screen.prio-2 .incident{color:var(--prio2)}
+  .addr{
+    display:flex;flex-direction:column;gap:.35rem;
+    border-left:4px solid var(--line);padding-left:1.1rem;
+  }
+  .addr .street{
+    font-weight:600;font-size:clamp(1.4rem,4.4vh,3rem);line-height:1.05;
+  }
+  .addr .place{
+    color:var(--muted);font-size:clamp(1rem,2.4vh,1.5rem);
+    font-family:'Roboto Mono',monospace;letter-spacing:.02em;
+  }
+  .units{display:flex;flex-direction:column;gap:.7rem;padding-top:.3rem}
+  .unit-chips{display:flex;flex-direction:column;gap:.4rem}
+  .chip{
+    display:flex;align-items:baseline;gap:.7rem;
+    font-size:clamp(1.05rem,2.6vh,1.6rem);font-weight:600;
+  }
+  .chip .cc{
+    font-family:'Roboto Mono',monospace;font-weight:500;
+    color:var(--muted);font-size:.72em;letter-spacing:.02em;
+  }
+  .chip.known .name{color:var(--accent)}
+  .chip.unknown .name{color:var(--muted);font-weight:500}
+  .footer-line{
+    color:var(--muted);font-size:clamp(.75rem,1.6vh,1rem);
+    font-family:'Roboto Mono',monospace;letter-spacing:.04em;padding-top:.2rem;
+  }
+
+  .alarm-side{
+    flex:0 0 42%;max-width:42%;position:relative;
+    border-left:1px solid var(--line);
+    background:var(--panel-2);
+    display:flex;flex-direction:column;
+  }
+  #map{flex:1;width:100%;background:#e6ecf2}
+  .route-badge{
+    position:absolute;top:1rem;left:1rem;z-index:600;
+    display:flex;gap:1.1rem;align-items:stretch;
+    background:rgba(10,15,26,.86);backdrop-filter:blur(6px);
+    border:1px solid var(--line);border-radius:12px;
+    padding:.7rem 1.1rem;
+  }
+  .route-badge .item{display:flex;flex-direction:column;gap:.15rem}
+  .route-badge .k{
+    color:var(--muted);text-transform:uppercase;letter-spacing:.14em;
+    font-size:clamp(.68rem,1.4vh,.9rem);
+  }
+  .route-badge .v{
+    font-family:'Roboto Mono',monospace;font-weight:700;
+    font-size:clamp(1.5rem,3.8vh,2.4rem);line-height:1;
+  }
+  .route-badge .v.time{color:var(--accent)}
+  .route-badge .vsep{width:1px;background:var(--line)}
+  .route-badge.loading .v{color:var(--muted);font-weight:500}
+
+  .leaflet-container{font-family:'Roboto Mono',monospace}
+  .pin{
+    width:22px;height:22px;border-radius:50% 50% 50% 0;
+    transform:rotate(-45deg);border:2px solid #0a0f1a;
+    box-shadow:0 2px 6px rgba(0,0,0,.5);
+  }
+  .pin.start{background:var(--accent)}
+  .pin.inc-1{background:var(--prio1)}
+  .pin.inc-2{background:var(--prio2)}
+
+  /* ---------- Testpaneel ---------- */
+  #testToggle{
+    position:fixed;right:1rem;bottom:1rem;z-index:1000;
+    font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:.14em;
+    text-transform:uppercase;font-size:.8rem;
+    background:var(--panel);color:var(--text);
+    border:1px solid var(--line);border-radius:10px;
+    padding:.6rem 1rem;cursor:pointer;opacity:.5;transition:opacity .2s;
+  }
+  #testToggle:hover,#testToggle:focus-visible{opacity:1;outline:2px solid var(--accent)}
+
+  .brand-credit{
+    position:fixed;left:50%;bottom:.55rem;transform:translateX(-50%);
+    z-index:500;color:var(--muted);opacity:.5;pointer-events:none;
+    font-family:'Inter',sans-serif;font-size:clamp(.42rem,.85vh,.55rem);
+    letter-spacing:.03em;text-align:center;line-height:1.45;transition:opacity .3s;
+  }
+  .brand-credit .mail{opacity:.85}
+  #screen.is-alarm ~ .brand-credit{opacity:0}
+
+  #testPanel{
+    position:fixed;inset:auto 0 0 0;z-index:1001;
+    background:var(--panel);border-top:1px solid var(--line);
+    padding:1.1rem clamp(1rem,3vw,2rem) 1.4rem;
+    transform:translateY(110%);transition:transform .28s ease;
+    box-shadow:0 -12px 40px rgba(0,0,0,.45);
+  }
+  #testPanel.open{transform:translateY(0)}
+  .tp-head{
+    display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;
+  }
+  .tp-head .tag{
+    background:var(--brand);color:#fff;font-family:'Oswald',sans-serif;
+    font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+    font-size:.7rem;padding:.2rem .5rem;border-radius:5px;
+  }
+  .tp-head h2{font-size:1rem;font-weight:600}
+  .tp-head .close{
+    margin-left:auto;background:none;border:1px solid var(--line);
+    color:var(--muted);border-radius:8px;width:2rem;height:2rem;
+    cursor:pointer;font-size:1.1rem;line-height:1;
+  }
+  .tp-grid{
+    display:grid;grid-template-columns:1fr 1fr;
+    gap:.8rem;align-items:end;
+  }
+  .field.wide{grid-column:1 / -1}
+  .tp-actions{grid-column:1 / -1}
+  .field{display:flex;flex-direction:column;gap:.35rem;min-width:0}
+  .field label{
+    color:var(--muted);font-size:.7rem;text-transform:uppercase;
+    letter-spacing:.12em;
+  }
+  .field input{
+    background:var(--panel-2);border:1px solid var(--line);
+    color:var(--text);border-radius:9px;padding:.7rem .8rem;
+    font-size:1rem;font-family:'Inter',sans-serif;width:100%;
+  }
+  .field input:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  .prio-pick{display:flex;gap:.4rem}
+  .prio-pick button{
+    flex:1;border:1px solid var(--line);background:var(--panel-2);
+    color:var(--muted);border-radius:9px;padding:.7rem .5rem;cursor:pointer;
+    font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:.06em;
+    text-transform:uppercase;font-size:.85rem;white-space:nowrap;
+  }
+  .prio-pick button.sel[data-prio="1"]{background:var(--prio1);color:#0a0f1a;border-color:var(--prio1)}
+  .prio-pick button.sel[data-prio="2"]{background:var(--prio2);color:#0a0f1a;border-color:var(--prio2)}
+  .tp-actions{display:flex;gap:.6rem}
+  .btn{
+    border:none;border-radius:9px;padding:.75rem 1.1rem;cursor:pointer;
+    font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:.08em;
+    text-transform:uppercase;font-size:.85rem;white-space:nowrap;
+  }
+  .btn.primary{background:var(--accent);color:#04121f}
+  .btn.ghost{background:var(--panel-2);color:var(--text);border:1px solid var(--line)}
+  .btn:focus-visible{outline:2px solid #fff}
+  .tp-hint{color:var(--muted);font-size:.75rem;margin-top:.7rem;line-height:1.4}
+  .tp-hint b{color:var(--text);font-weight:600}
+
+  @media(prefers-reduced-motion:reduce){
+    *{transition:none!important}
+  }
+</style>
+</head>
+<body>
+
+<div id="screen">
+  <!-- Topbalk -->
+  <header class="topbar">
+    <a class="mark" id="logoLink" role="button" aria-label="Naar testversie" title="Naar testversie">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192.756 192.756"><g fill-rule="evenodd" clip-rule="evenodd"><path fill="#fff" d="M0 0h192.756v192.756H0V0z"/><path fill="#c23c40" d="M180.713 173.916H10.635V17.974h170.078v155.942z"/><path d="M88.237 104.619C84.009 94.027 74.606 85.668 71.54 76.373c-2.935.916-5.707 1.991-8.199 3.263 1.016 23.889 14.223 39.186 24.908 47.208 3.47-9.557 2.578-15.742-.012-22.225zM111.654 62.965c10.496 1.485 20.266 4.43 27.922 8.904-.021 16.828-4.76 30.529-11.34 41.34l10.105 11.58c9.115-13.928 15.814-32.031 15.814-54.71-11.834-8.822-29.43-13.92-47.936-15.321 1.496 2.745 3.396 5.613 5.435 8.207z" fill="#d2b22c"/><path d="M51.772 71.869c.021 16.828 4.76 30.529 11.339 41.34l-10.105 11.58C43.89 110.861 37.19 92.758 37.19 70.079c8.981-6.695 21.284-11.243 34.779-13.666-.981 2.938-1.534 5.733-1.737 8.345-6.856 1.659-13.167 4.017-18.46 7.111zM95.674 160.469c-7.354-2.512-19.218-9.176-30.347-20.441l9.979-11.434c7.389 7.291 15.007 12.053 20.369 14.457 5.361-2.404 12.978-7.166 20.367-14.457l9.979 11.434c-11.13 11.265-22.994 17.929-30.347 20.441z" fill="#d2b22c"/><path d="M110.906 104.527c8.277-11.193 8.225-21.911 6.896-28.735 3.691 1.015 7.15 2.286 10.203 3.844-1.273 29.959-21.734 46.446-32.332 51.954-1.449-.752-3.094-1.732-4.838-2.902 18.638-23.004.6-44.737-2.591-49.156-3.209-4.446-7.127-11.119-8.482-17.14-2.215-9.848-.529-23.6 14.871-37.984l1.04.421c-7.404 13.854-6.59 21.673-3.488 30.334 3.396 9.486 15.72 22.137 18.269 33.532.99 4.416 1.168 9.733-.385 15.575l.837.257z" fill="#d2b22c"/></g></svg>
+    </a>
+    <div class="post-id">
+      <span class="name">Post Veluwsekant</span>
+      <span class="sub">Brandweer Almere · Flevoland</span>
+    </div>
+    <div class="status">
+      <span class="dot" id="connDot"></span>
+      <span id="connText">Geen actieve melding</span>
+    </div>
+  </header>
+
+  <!-- Rustweergave -->
+  <section class="idle">
+    <div class="duty" id="dutyPloeg">—</div>
+    <div class="clock"><span id="hm">--:--</span><span class="sec" id="ss">:--</span></div>
+    <div class="date" id="dateText">—</div>
+    <div class="weather" id="weatherCard">
+      <div class="glyph" id="wxGlyph">·</div>
+      <div class="sep"></div>
+      <div class="temp" id="wxTemp">--°</div>
+      <div class="wx-meta">
+        <div class="cond" id="wxCond">Weer laden…</div>
+        <div class="wind" id="wxWind">Almere</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Alarmweergave -->
+  <section class="alarm">
+    <div class="alarm-strip">
+      <span id="prioLabel">Prioriteit —</span>
+      <span class="when" id="alarmWhen">--:--</span>
+    </div>
+    <div class="alarm-body">
+      <div class="alarm-main">
+        <div class="eyebrow">Melding</div>
+        <div class="incident" id="incidentType">—</div>
+        <div class="addr">
+          <div class="street" id="incidentStreet">—</div>
+          <div class="place" id="incidentPlace"></div>
+        </div>
+        <div class="units">
+          <div class="eyebrow">Ingezette eenheden</div>
+          <div class="unit-chips" id="unitChips"></div>
+        </div>
+      </div>
+      <aside class="alarm-side">
+        <div class="route-badge loading" id="routeBadge">
+          <div class="item">
+            <span class="k">Rijtijd</span>
+            <span class="v time" id="routeTime">—</span>
+          </div>
+          <div class="vsep"></div>
+          <div class="item">
+            <span class="k">Afstand</span>
+            <span class="v" id="routeDist">—</span>
+          </div>
+        </div>
+        <div id="map"></div>
+      </aside>
+    </div>
+  </section>
+</div>
+
+<!-- Testknop + paneel -->
+<button id="testToggle">Test</button>
+<div class="brand-credit">© 2026 R-Tech | Web Development by Bos. All rights reserved.<br><span class="mail">richardbos@icloud.com</span></div>
+
+<div id="testPanel">
+  <div class="tp-head">
+    <span class="tag">Test</span>
+    <h2>Melding simuleren</h2>
+    <button class="close" id="tpClose" aria-label="Sluiten">×</button>
+  </div>
+  <div class="tp-grid">
+    <div class="field wide">
+      <label for="fRaw">P2000-bericht plakken</label>
+      <input id="fRaw" type="text" placeholder="P 1 BMD-01 WONINGBRAND KERKSTRAAT ALMERE 254133 254152" value="P 2 BMD-01 DIER TE WATER WINKELWEG ZEEWOLDE 254133 254152" autocomplete="off">
+    </div>
+    <div class="tp-actions">
+      <button class="btn primary" id="fireBtn">Maak melding</button>
+      <button class="btn ghost" id="clearBtn">Terug naar rust</button>
+    </div>
+  </div>
+  <p class="tp-hint">Plak de P2000-regel en tik <b>Maak melding</b>. Prio (P 1 → prio 1, P 2 → prio 2), soort melding, adres en eenheden worden er automatisch uit gehaald. Adres wordt live opgezocht (PDOK); rijtijd vanaf Veluwsezoom&nbsp;52 (OSRM). Melding valt na 5&nbsp;min terug naar rust.</p>
+</div>
+
+<script>
+/* ================= Config ================= */
+const START_COORDS = { lat: 52.356938, lon: 5.247188 }; // Post Veluwsekant, Plus Code 964W+QV
+const ALMERE = { lat: 52.3746, lon: 5.2653 };           // weer
+const ALARM_TIMEOUT_MS = 5 * 60 * 1000;                 // 5 min
+
+// >>> Vul in na het deployen <<<
+const TEST_URL = "";  // URL van de TESTversie (waar de logo-klik op de live-pagina naartoe gaat)
+
+// Zet op true voor de LIVE-pagina: de Test-knop verdwijnt, logo-klik gaat naar de test.
+const IS_LIVE = false;
+
+// Capcodes waarop de live-feed straks filtert (alarms voor Post Veluwsekant).
+const FILTER_CAPCODES = ["0700140", "0700143"]; // 0700140 = TS, 0700143 = autoladder
+
+// Ploeg-rotatie: 24-uursdienst, wisselt om 07:00. 17 juni 2026 = D-ploeg.
+const PLOEG_ANKER = new Date(2026, 5, 17);   // maand 5 = juni
+const PLOEGEN = ['D', 'A', 'B', 'C'];
+function currentPloeg(now){
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if(now.getHours() < 7) d.setDate(d.getDate() - 1);
+  const days = Math.round((d - PLOEG_ANKER) / 86400000);
+  return PLOEGEN[((days % 4) + 4) % 4];
+}
+
+// Capcode -> herkenbare naam (op laatste 4 cijfers). Hier vul je nieuwe eenheden bij.
+const UNITS = {
+  "4111": "Waterongevallenvoertuig Almere",
+  "4112": "Brandweerboot",
+  "4131": "Tankautospuit Poort",
+  "4132": "Tankautospuit Buiten",
+  "4133": "Tankautospuit Veluwsekant",
+  "4134": "Tankautospuit",
+  "4152": "Autoladder Veluwsekant",
+  "4171": "Hulpverleningsvoertuig",
+  "5111": "Waterongevallenvoertuig Lelystad",
+  "5152": "Autoladder Lelystad",
+  "8131": "Reserve Tankautospuit"
+};
+function parseUnits(str){
+  const codes = (str||'').match(/\d{4,7}/g) || [];
+  return codes.map(code=>{
+    const name = UNITS[code.slice(-4)];
+    return { code, name: name || ('Eenheid ' + code), known: !!name };
+  });
+}
+function renderUnits(units){
+  const wrap = document.getElementById('unitChips');
+  wrap.innerHTML = '';
+  if(!units.length){
+    wrap.innerHTML = '<span class="chip unknown"><span class="name">Geen eenheden</span></span>';
+    return;
+  }
+  units.forEach(u=>{
+    const el = document.createElement('div');
+    el.className = 'chip ' + (u.known ? 'known' : 'unknown');
+    const n = document.createElement('span'); n.className='name'; n.textContent=u.name;
+    const c = document.createElement('span'); c.className='cc'; c.textContent=u.code;
+    el.appendChild(n); el.appendChild(c);
+    wrap.appendChild(el);
+  });
+}
+
+let selectedPrio = 2;
+let map, startMarker, incMarker, routeLine;
+let alarmTimer = null;
+let alarmTick = null;
+let startCoords = { ...START_COORDS };
+
+/* ================= Klok ================= */
+function tick(){
+  const now = new Date();
+  const p = n => String(n).padStart(2,'0');
+  document.getElementById('dutyPloeg').textContent = currentPloeg(now) + '-ploeg';
+  document.getElementById('hm').textContent = p(now.getHours())+':'+p(now.getMinutes());
+  document.getElementById('ss').textContent = ':'+p(now.getSeconds());
+  document.getElementById('dateText').textContent =
+    now.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+setInterval(tick,1000); tick();
+
+/* ================= Weer (Open-Meteo) ================= */
+const WMO = {
+  0:['Onbewolkt','☀️'],1:['Overwegend helder','🌤️'],2:['Half bewolkt','⛅'],3:['Bewolkt','☁️'],
+  45:['Mist','🌫️'],48:['Aanvriezende mist','🌫️'],
+  51:['Lichte motregen','🌦️'],53:['Motregen','🌦️'],55:['Dichte motregen','🌦️'],
+  56:['IJzel','🌧️'],57:['IJzel','🌧️'],
+  61:['Lichte regen','🌦️'],63:['Regen','🌧️'],65:['Zware regen','🌧️'],
+  66:['IJzelregen','🌧️'],67:['IJzelregen','🌧️'],
+  71:['Lichte sneeuw','🌨️'],73:['Sneeuw','🌨️'],75:['Zware sneeuw','❄️'],77:['Sneeuwkorrels','🌨️'],
+  80:['Regenbuien','🌦️'],81:['Regenbuien','🌧️'],82:['Zware buien','⛈️'],
+  85:['Sneeuwbuien','🌨️'],86:['Sneeuwbuien','❄️'],
+  95:['Onweer','⛈️'],96:['Onweer met hagel','⛈️'],99:['Zwaar onweer','⛈️']
+};
+function windDir(deg){
+  const dirs=['N','NO','O','ZO','Z','ZW','W','NW'];
+  return dirs[Math.round(deg/45)%8];
+}
+async function loadWeather(){
+  const url=`https://api.open-meteo.com/v1/forecast?latitude=${ALMERE.lat}&longitude=${ALMERE.lon}`+
+    `&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=kmh&timezone=Europe%2FAmsterdam`;
+  try{
+    const r=await fetch(url); const d=await r.json(); const c=d.current;
+    const [txt,glyph]=WMO[c.weather_code]||['—','·'];
+    document.getElementById('wxGlyph').textContent=glyph;
+    document.getElementById('wxTemp').textContent=Math.round(c.temperature_2m)+'°';
+    document.getElementById('wxCond').textContent=txt;
+    document.getElementById('wxWind').textContent=
+      `Wind ${windDir(c.wind_direction_10m)} ${Math.round(c.wind_speed_10m)} km/u · Almere`;
+  }catch(e){
+    document.getElementById('wxCond').textContent='Weer niet beschikbaar';
+    document.getElementById('wxWind').textContent='Almere';
+  }
+}
+loadWeather();
+setInterval(loadWeather,15*60*1000);
+
+/* ================= Geocoding (PDOK Locatieserver) ================= */
+async function geocode(q){
+  const url=`https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q=${encodeURIComponent(q)}`+
+    `&fl=weergavenaam,centroide_ll&rows=1`;
+  const r=await fetch(url); const d=await r.json();
+  const doc=d?.response?.docs?.[0];
+  if(!doc) return null;
+  const m=doc.centroide_ll.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/); // lon lat
+  return { lon:parseFloat(m[1]), lat:parseFloat(m[2]), label:doc.weergavenaam };
+}
+// startpunt vast opzoeken
+// Startpunt (post) staat vast op vaste coördinaten; geen geocoding nodig.
+
+/* ================= Route (OSRM) ================= */
+async function loadRoute(dest){
+  const badge=document.getElementById('routeBadge');
+  badge.classList.add('loading');
+  document.getElementById('routeTime').textContent='…';
+  document.getElementById('routeDist').textContent='…';
+  const url=`https://router.project-osrm.org/route/v1/driving/`+
+    `${startCoords.lon},${startCoords.lat};${dest.lon},${dest.lat}?overview=full&geometries=geojson`;
+  try{
+    const r=await fetch(url); const d=await r.json();
+    const route=d.routes?.[0];
+    if(!route) throw new Error('geen route');
+    const min=Math.round(route.duration/60);
+    const km=(route.distance/1000).toFixed(1);
+    document.getElementById('routeTime').textContent=min+' min';
+    document.getElementById('routeDist').textContent=km+' km';
+    badge.classList.remove('loading');
+    if(routeLine) routeLine.remove();
+    const latlngs=route.geometry.coordinates.map(c=>[c[1],c[0]]);
+    routeLine=L.polyline(latlngs,{color:'#1565c0',weight:5,opacity:.9}).addTo(map);
+    const fit=()=>{ map.invalidateSize(); map.fitBounds(routeLine.getBounds(),{padding:[30,30],maxZoom:14}); };
+    fit();
+    setTimeout(fit,200);
+  }catch(e){
+    document.getElementById('routeTime').textContent='n.b.';
+    document.getElementById('routeDist').textContent='n.b.';
+    badge.classList.remove('loading');
+  }
+}
+
+/* ================= Kaart ================= */
+function pinIcon(cls){
+  return L.divIcon({className:'',html:`<div class="pin ${cls}"></div>`,
+    iconSize:[22,22],iconAnchor:[11,22]});
+}
+function initMap(dest){
+  if(!map){
+    map=L.map('map',{zoomControl:false,attributionControl:false}).setView([dest.lat,dest.lon],13);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+      {maxZoom:19,subdomains:'abcd'}).addTo(map);
+  }
+  if(startMarker) startMarker.remove();
+  if(incMarker) incMarker.remove();
+  startMarker=L.marker([startCoords.lat,startCoords.lon],{icon:pinIcon('start')})
+    .addTo(map).bindTooltip('Post Veluwsekant');
+  incMarker=L.marker([dest.lat,dest.lon],{icon:pinIcon('inc-'+selectedPrio)})
+    .addTo(map);
+  map.setView([dest.lat,dest.lon],13);
+  setTimeout(()=>map.invalidateSize(),80);
+}
+
+/* ================= Alarm tonen / wissen ================= */
+async function showAlarm(type,addr,prio,unitsStr){
+  const screen=document.getElementById('screen');
+  selectedPrio=prio;
+  screen.classList.remove('prio-1','prio-2');
+  screen.classList.add('is-alarm','prio-'+prio);
+
+  document.getElementById('prioLabel').textContent='Prioriteit '+prio;
+  document.getElementById('incidentType').textContent=type||'Melding';
+  renderUnits(parseUnits(unitsStr));
+  const t0=Date.now();
+  document.getElementById('alarmWhen').textContent='00:00';
+  clearInterval(alarmTick);
+  alarmTick=setInterval(()=>{
+    const s=Math.floor((Date.now()-t0)/1000);
+    document.getElementById('alarmWhen').textContent=
+      String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+  },1000);
+  document.getElementById('connText').textContent='Actieve melding';
+  document.getElementById('connDot').style.background='var(--prio'+prio+')';
+
+  // adres tonen (voorlopig ruwe invoer, daarna verrijkt)
+  document.getElementById('incidentStreet').textContent=addr;
+  document.getElementById('incidentPlace').textContent='Locatie opzoeken…';
+
+  let geo=await geocode(addr).catch(()=>null);
+  if(!geo){
+    const place=addr.split(/[,\s]+/).filter(Boolean).pop();
+    if(place) geo=await geocode(place).catch(()=>null);
+  }
+  if(geo){
+    // label opsplitsen in straat / plaats waar mogelijk
+    document.getElementById('incidentStreet').textContent=geo.label.split(',')[0];
+    document.getElementById('incidentPlace').textContent=
+      geo.label.split(',').slice(1).join(',').trim()||'Almere';
+    initMap({lat:geo.lat,lon:geo.lon});
+    loadRoute({lat:geo.lat,lon:geo.lon});
+  }else{
+    document.getElementById('incidentPlace').textContent='Locatie niet gevonden';
+    document.getElementById('routeTime').textContent='n.b.';
+    document.getElementById('routeDist').textContent='n.b.';
+    document.getElementById('routeBadge').classList.remove('loading');
+  }
+
+  clearTimeout(alarmTimer);
+  alarmTimer=setTimeout(clearAlarm,ALARM_TIMEOUT_MS);
+}
+function clearAlarm(){
+  clearTimeout(alarmTimer);
+  clearInterval(alarmTick);
+  const screen=document.getElementById('screen');
+  screen.classList.remove('is-alarm','prio-1','prio-2');
+  document.getElementById('connText').textContent='Geen actieve melding';
+  document.getElementById('connDot').style.background='var(--ok)';
+}
+
+/* ================= Testpaneel ================= */
+const panel=document.getElementById('testPanel');
+document.getElementById('testToggle').onclick=()=>panel.classList.toggle('open');
+document.getElementById('tpClose').onclick=()=>panel.classList.remove('open');
+
+/* Koppeling: logo -> testversie (alleen op de live-pagina actief) */
+document.getElementById('logoLink').onclick=()=>{ if(IS_LIVE && TEST_URL) location.href=TEST_URL; };
+if(IS_LIVE){
+  document.getElementById('testToggle').style.display='none';
+}else{
+  document.getElementById('logoLink').style.cursor='default';
+}
+
+/* P2000-regel ontleden, bijv: "P 2 BMD-01 DIER TE WATER WINKELWEG ZEEWOLDE 254133 254152" */
+function parseP2000(raw){
+  let s=(raw||'').replace(/\s+/g,' ').trim();
+  const pm=s.match(/\bP\s*([12])\b/i) || s.match(/\bPRIO\s*([12])\b/i);
+  const prio=pm?parseInt(pm[1],10):selectedPrio;
+  const caps=s.match(/\d{6,7}/g)||[];
+  let mid=s
+    .replace(/\bPRIO\s*[12]\b/i,'')
+    .replace(/\bP\s*[12]\b/i,'')
+    .replace(/\d{6,7}/g,'')
+    .replace(/\b[A-Z]{2,4}[-\s]?\d{1,2}\b/,'')   // meldkamer/regiocode, bv. BMD-01
+    .replace(/\s+/g,' ').trim();
+  const words=mid.split(' ').filter(Boolean);
+  let type=mid, addr='';
+  if(words.length>=3){ addr=words.slice(-2).join(' '); type=words.slice(0,-2).join(' '); }
+  return { prio, type, addr, units:caps.join(' ') };
+}
+document.getElementById('fireBtn').onclick=()=>{
+  const raw=document.getElementById('fRaw').value.trim();
+  if(!raw){document.getElementById('fRaw').focus();return;}
+  const p=parseP2000(raw);
+  panel.classList.remove('open');
+  showAlarm(p.type,p.addr,p.prio,p.units);
+};
+document.getElementById('clearBtn').onclick=()=>{ panel.classList.remove('open'); clearAlarm(); };
+</script>
+</body>
+</html>
