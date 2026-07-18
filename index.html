@@ -153,7 +153,7 @@
     font-family:'Oswald',sans-serif;font-weight:700;
     text-transform:uppercase;line-height:.94;
     font-size:clamp(2.6rem,9.5vh,7rem);
-    word-break:break-word;
+    word-break:normal;overflow-wrap:break-word;
   }
   #screen.prio-1 .incident{color:var(--prio1)}
   #screen.prio-2 .incident{color:var(--prio2)}
@@ -452,7 +452,9 @@ const UNITS = {
   "4171": "Hulpverleningsvoertuig",
   "5111": "Waterongevallenvoertuig Lelystad",
   "5152": "Autoladder Lelystad",
-  "8131": "Reserve Tankautospuit"
+  "8131": "Reserve Tankautospuit",
+  "0140": "Tankautospuit Veluwsekant",
+  "0143": "Autoladder Veluwsekant"
 };
 function parseUnits(str){
   const codes = (str||'').match(/\d{4,7}/g) || [];
@@ -582,6 +584,7 @@ function parseFeed(item){
   const src = (item.desc && item.desc.trim()) ? item.desc : (item.title||'');
   return parseP2000(src);
 }
+let firstPoll = true;
 async function pollFeed(){
   try{
     const r = await fetch('/api/melding',{cache:'no-store'});
@@ -589,10 +592,16 @@ async function pollFeed(){
     setConn(!d.error);
     const m = d.melding;
     if(m && m.id !== lastFeedId){
+      const ageMs = m.pub ? (Date.now() - new Date(m.pub).getTime()) : 0;
+      const recent = ageMs >= 0 && ageMs < 20*60*1000;
       lastFeedId = m.id;
-      const p = parseFeed(m);
-      showAlarm(p.type, p.addr, p.prio, p.units, FEED_ALARM_TIMEOUT_MS, p.mid);
+      // bij openen alleen tonen als recent; daarna elke echt nieuwe melding
+      if(!firstPoll || recent){
+        const p = parseFeed(m);
+        showAlarm(p.type, p.addr, p.prio, p.units, FEED_ALARM_TIMEOUT_MS, p.mid);
+      }
     }
+    firstPoll = false;
   }catch(e){ setConn(false); }
 }
 setInterval(pollFeed, 10000);
@@ -667,6 +676,33 @@ function initMap(dest){
 }
 
 /* ================= Alarm tonen / wissen ================= */
+function fitIncident(text){
+  const el=document.getElementById('incidentType');
+  el.textContent=text||'Melding';
+  el.style.fontSize=''; // reset naar CSS-standaard
+  const maxW=el.clientWidth-4;
+  if(maxW<=0) return; // niet zichtbaar
+  const cs=getComputedStyle(el);
+  const longest=(text||'Melding').split(/\s+/).reduce((a,b)=>b.length>a.length?b:a,'');
+  const probe=document.createElement('span');
+  probe.style.cssText='position:absolute;visibility:hidden;white-space:nowrap;'+
+    'font-family:'+cs.fontFamily+';font-weight:'+cs.fontWeight+';'+
+    'text-transform:'+cs.textTransform+';letter-spacing:'+cs.letterSpacing+';';
+  probe.textContent=longest;
+  document.body.appendChild(probe);
+  let size=parseFloat(cs.fontSize), guard=0;
+  probe.style.fontSize=size+'px';
+  while(probe.getBoundingClientRect().width>maxW && size>18 && guard<200){
+    size-=2; probe.style.fontSize=size+'px'; guard++;
+  }
+  probe.remove();
+  el.style.fontSize=size+'px';
+}
+window.addEventListener('resize',()=>{
+  if(document.getElementById('screen').classList.contains('is-alarm')){
+    fitIncident(document.getElementById('incidentType').textContent);
+  }
+});
 async function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
   const screen=document.getElementById('screen');
   selectedPrio=prio;
@@ -674,7 +710,7 @@ async function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
   screen.classList.add('is-alarm','prio-'+prio);
 
   document.getElementById('prioLabel').textContent='Prioriteit '+prio;
-  document.getElementById('incidentType').textContent=type||'Melding';
+  fitIncident(type||'Melding');
   const unitList=parseUnits(unitsStr);
   renderUnits(unitList);
   const t0=Date.now();
