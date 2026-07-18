@@ -577,7 +577,7 @@ function renderLastRun(){
 renderLastRun();
 
 /* ================= Live feed (alarmeringen.nl, via de Worker) ================= */
-const FEED_ALARM_TIMEOUT_MS = 30 * 60 * 1000; // feed-melding blijft 30 min staan (testfase)
+const FEED_ALARM_TIMEOUT_MS = 5 * 60 * 1000; // feed-melding blijft 5 min staan
 let lastFeedId = null;
 function parseFeed(item){
   // 112-nu: de omschrijving is de volledige P2000-regel; anders de titel
