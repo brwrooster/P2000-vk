@@ -628,8 +628,16 @@ function parseFeed(item){
       type = desc;
     }
   }
+  if(!addr){
+    // laatste redmiddel: uit de titel (zonder capcodes) de laatste woorden als plaats/straat
+    const t=(item.title||'').replace(/\d{6,7}/g,'').replace(/\bp\s*[12]\b/i,'').replace(/\b[A-Za-z]{2,4}[-\s]?\d{1,2}\b/,'').replace(/\s+/g,' ').trim();
+    const w=t.split(' ').filter(Boolean);
+    if(w.length>=2) addr=w.slice(-2).join(' ');
+    else if(w.length) addr=w[w.length-1];
+  }
   return { prio: base.prio, type, addr, units: base.units };
 }
+let firstPoll = true;
 async function pollFeed(){
   try{
     const r = await fetch('/api/melding',{cache:'no-store'});
@@ -637,10 +645,16 @@ async function pollFeed(){
     setConn(!d.error);
     const m = d.melding;
     if(m && m.id !== lastFeedId){
+      const ageMs = m.pub ? (Date.now() - new Date(m.pub).getTime()) : 0;
+      const recent = ageMs >= 0 && ageMs < 20*60*1000;
       lastFeedId = m.id;
-      const p = parseFeed(m);
-      showAlarm(p.type, p.addr, p.prio, p.units, FEED_ALARM_TIMEOUT_MS);
+      // bij openen alleen tonen als recent; daarna elke echt nieuwe melding
+      if(!firstPoll || recent){
+        const p = parseFeed(m);
+        showAlarm(p.type, p.addr, p.prio, p.units, FEED_ALARM_TIMEOUT_MS);
+      }
     }
+    firstPoll = false;
   }catch(e){ setConn(false); }
 }
 setInterval(pollFeed, 10000);
