@@ -157,14 +157,6 @@
   }
   #screen.prio-1 .incident{color:var(--prio1)}
   #screen.prio-2 .incident{color:var(--prio2)}
-  .incident-icon{
-    width:clamp(2.8rem,9vh,6rem);height:clamp(2.8rem,9vh,6rem);
-    color:var(--muted);
-  }
-  .incident-icon:empty{display:none}
-  .incident-icon svg{width:100%;height:100%;display:block}
-  #screen.prio-1 .incident-icon{color:var(--prio1)}
-  #screen.prio-2 .incident-icon{color:var(--prio2)}
   .addr{
     display:flex;flex-direction:column;gap:.35rem;
     border-left:4px solid var(--line);padding-left:1.1rem;
@@ -241,14 +233,24 @@
   }
   #testToggle:hover,#testToggle:focus-visible{opacity:1;outline:2px solid var(--accent)}
 
+  .screen-footer{
+    position:fixed;left:50%;bottom:.5rem;transform:translateX(-50%);
+    z-index:500;text-align:center;display:flex;flex-direction:column;gap:.3rem;
+    pointer-events:none;transition:opacity .3s;
+  }
+  #screen.is-alarm ~ .screen-footer{opacity:0}
+  .source-credit{
+    font-family:'Roboto Mono',monospace;font-size:clamp(.58rem,1.15vh,.78rem);
+    letter-spacing:.05em;color:var(--muted);opacity:.75;
+  }
+  .source-credit a{color:var(--accent);text-decoration:none;pointer-events:auto}
+  .source-credit a:hover{text-decoration:underline}
   .brand-credit{
-    position:fixed;left:50%;bottom:.55rem;transform:translateX(-50%);
-    z-index:500;color:var(--muted);opacity:.5;pointer-events:none;
+    color:var(--muted);opacity:.5;
     font-family:'Inter',sans-serif;font-size:clamp(.42rem,.85vh,.55rem);
-    letter-spacing:.03em;text-align:center;line-height:1.45;transition:opacity .3s;
+    letter-spacing:.03em;line-height:1.45;
   }
   .brand-credit .mail{opacity:.85}
-  #screen.is-alarm ~ .brand-credit{opacity:0}
 
   #testPanel{
     position:fixed;inset:auto 0 0 0;z-index:1001;
@@ -358,7 +360,6 @@
     </div>
     <div class="alarm-body">
       <div class="alarm-main">
-        <div class="incident-icon" id="incidentIcon"></div>
         <div class="eyebrow">Melding</div>
         <div class="incident" id="incidentType">—</div>
         <div class="addr">
@@ -390,7 +391,10 @@
 
 <!-- Testknop + paneel -->
 <button id="testToggle">Test</button>
-<div class="brand-credit">© 2026 R-Tech | Web Development by Bos. All rights reserved.<br><span class="mail">richardbos@icloud.com</span></div>
+<div class="screen-footer">
+  <div class="source-credit">Inhoud van <a href="https://112-nu.nl" target="_blank" rel="noopener">112-nu.nl</a></div>
+  <div class="brand-credit">© 2026 R-Tech | Web Development by Bos. All rights reserved.<br><span class="mail">richardbos@icloud.com</span></div>
+</div>
 
 <div id="testPanel">
   <div class="tp-head">
@@ -472,41 +476,6 @@ function renderUnits(units){
     el.appendChild(n); el.appendChild(c);
     wrap.appendChild(el);
   });
-}
-
-/* Eigen lijn-iconen per meldingssoort (kleuren mee met de prio) */
-function svgWrap(inner){
-  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '+
-         'stroke-linecap="round" stroke-linejoin="round">'+inner+'</svg>';
-}
-const ICONS = {
-  brand: svgWrap('<path fill="currentColor" stroke="none" d="M13 2c.3 2.8-1.4 4.1-2.7 5.6C9 9.1 8 10.4 8 12.3a4 4 0 0 0 8 0c0-1.2-.4-2.2-1.1-3.1.1 1-.7 1.8-1.6 1.8 1.1-2.4-.8-4.6-.3-9Z"/>'),
-  water: svgWrap('<path d="M3 7.5c1.8 0 1.8 1.4 3.6 1.4S8.4 7.5 10.2 7.5s1.8 1.4 3.6 1.4S15.6 7.5 17.4 7.5 19.2 8.9 21 8.9"/><path d="M3 12c1.8 0 1.8 1.4 3.6 1.4S8.4 12 10.2 12s1.8 1.4 3.6 1.4S15.6 12 17.4 12 19.2 13.4 21 13.4"/><path d="M3 16.5c1.8 0 1.8 1.4 3.6 1.4S8.4 16.5 10.2 16.5s1.8 1.4 3.6 1.4S15.6 16.5 17.4 16.5 19.2 17.9 21 17.9"/>'),
-  dier: svgWrap('<ellipse cx="12" cy="15.5" rx="3.4" ry="2.8" fill="currentColor" stroke="none"/><circle cx="7.5" cy="11" r="1.5" fill="currentColor" stroke="none"/><circle cx="10.7" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="13.3" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="16.5" cy="11" r="1.5" fill="currentColor" stroke="none"/>'),
-  verkeer: svgWrap('<path d="M5 14l1.5-4A2 2 0 0 1 8.4 8.7h7.2a2 2 0 0 1 1.9 1.3L19 14"/><rect x="3.5" y="14" width="17" height="4" rx="1"/><circle cx="7.5" cy="18" r="1.4" fill="currentColor" stroke="none"/><circle cx="16.5" cy="18" r="1.4" fill="currentColor" stroke="none"/>'),
-  medisch: svgWrap('<path fill="currentColor" stroke="none" d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z"/>'),
-  storm: svgWrap('<path d="M3 9h11a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 13h15a2.5 2.5 0 1 1-2.5 2.5"/><path d="M3 17h9"/>'),
-  alarm: svgWrap('<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2H4.5L6 16Z"/><path d="M10 18.5a2 2 0 0 0 4 0"/>'),
-  gevaar: svgWrap('<path d="M12 4l8.5 15H3.5L12 4Z"/><path d="M12 10v4"/><circle cx="12" cy="16.6" r=".7" fill="currentColor" stroke="none"/>'),
-  lift: svgWrap('<rect x="5" y="4" width="14" height="16" rx="1.5"/><path d="M9 9l-1.5-2L6 9"/><path d="M6 14l1.5 2L9 14"/>'),
-  hulpverlening: svgWrap('<path d="M15.5 4.5a3.5 3.5 0 0 0-4.6 4.6l-6.1 6.1a1.6 1.6 0 0 0 2.3 2.3l6.1-6.1a3.5 3.5 0 0 0 4.6-4.6l-2.2 2.2-1.7-.4-.4-1.7 2-2Z"/>'),
-  default: svgWrap('<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5"/><circle cx="12" cy="16.4" r=".7" fill="currentColor" stroke="none"/>')
-};
-function iconFor(type){
-  const t=(type||'').toLowerCase();
-  const has=(...k)=>k.some(x=>t.includes(x));
-  let key='default';
-  if(has('reanim','letsel','medisch','ademhal','aed','ambulance','onwel','hartstil')) key='medisch';
-  else if(has('water','drenkeling','duik','wateroverlast')) key='water';
-  else if(has('gas','gevaarlijke stof','stankoverlast','lekkage','co2','co ')) key='gevaar';
-  else if(has('lift')) key='lift';
-  else if(has('storm','wind','boom','omgewaaid')) key='storm';
-  else if(has('oms','automatische','brandmeld','loos','loze')) key='alarm';
-  else if(has('brand','rook','schoorsteen','vlam')) key='brand';
-  else if(has('dier')) key='dier';
-  else if(has('ongeval','aanrijding','verkeer','beknelling','vtc','vko')) key='verkeer';
-  else if(has('hulpverlening','assistentie','ondersteun','deur open')) key='hulpverlening';
-  return ICONS[key] || ICONS.default;
 }
 
 let selectedPrio = 2;
@@ -609,35 +578,10 @@ renderLastRun();
 const FEED_ALARM_TIMEOUT_MS = 30 * 60 * 1000; // feed-melding blijft 30 min staan (testfase)
 let lastFeedId = null;
 function parseFeed(item){
-  const base = parseP2000(item.title||'');
-  let type = base.type, addr = base.addr;
-  const desc = (item.desc||'').trim();
-  if(desc){
-    const low = desc.toLowerCase();
-    const opIdx = low.indexOf(' op ');
-    const inIdx = low.lastIndexOf(' in ');
-    if(opIdx>-1 && inIdx>opIdx){
-      type = desc.slice(0,opIdx).trim();
-      const straat = desc.slice(opIdx+4,inIdx).trim();
-      const plaats = desc.slice(inIdx+4).trim();
-      addr = straat + (plaats ? ', '+plaats : '');
-    } else if(inIdx>-1){
-      type = desc.slice(0,inIdx).trim();
-      addr = desc.slice(inIdx+4).trim();
-    } else {
-      type = desc;
-    }
-  }
-  if(!addr){
-    // laatste redmiddel: uit de titel (zonder capcodes) de laatste woorden als plaats/straat
-    const t=(item.title||'').replace(/\d{6,7}/g,'').replace(/\bp\s*[12]\b/i,'').replace(/\b[A-Za-z]{2,4}[-\s]?\d{1,2}\b/,'').replace(/\s+/g,' ').trim();
-    const w=t.split(' ').filter(Boolean);
-    if(w.length>=2) addr=w.slice(-2).join(' ');
-    else if(w.length) addr=w[w.length-1];
-  }
-  return { prio: base.prio, type, addr, units: base.units };
+  // 112-nu: de omschrijving is de volledige P2000-regel; anders de titel
+  const src = (item.desc && item.desc.trim()) ? item.desc : (item.title||'');
+  return parseP2000(src);
 }
-let firstPoll = true;
 async function pollFeed(){
   try{
     const r = await fetch('/api/melding',{cache:'no-store'});
@@ -645,16 +589,10 @@ async function pollFeed(){
     setConn(!d.error);
     const m = d.melding;
     if(m && m.id !== lastFeedId){
-      const ageMs = m.pub ? (Date.now() - new Date(m.pub).getTime()) : 0;
-      const recent = ageMs >= 0 && ageMs < 20*60*1000;
       lastFeedId = m.id;
-      // bij openen alleen tonen als recent; daarna elke echt nieuwe melding
-      if(!firstPoll || recent){
-        const p = parseFeed(m);
-        showAlarm(p.type, p.addr, p.prio, p.units, FEED_ALARM_TIMEOUT_MS);
-      }
+      const p = parseFeed(m);
+      showAlarm(p.type, p.addr, p.prio, p.units, FEED_ALARM_TIMEOUT_MS, p.mid);
     }
-    firstPoll = false;
   }catch(e){ setConn(false); }
 }
 setInterval(pollFeed, 10000);
@@ -729,7 +667,7 @@ function initMap(dest){
 }
 
 /* ================= Alarm tonen / wissen ================= */
-async function showAlarm(type,addr,prio,unitsStr,timeoutMs){
+async function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
   const screen=document.getElementById('screen');
   selectedPrio=prio;
   screen.classList.remove('prio-1','prio-2');
@@ -737,7 +675,6 @@ async function showAlarm(type,addr,prio,unitsStr,timeoutMs){
 
   document.getElementById('prioLabel').textContent='Prioriteit '+prio;
   document.getElementById('incidentType').textContent=type||'Melding';
-  document.getElementById('incidentIcon').innerHTML=iconFor(type);
   const unitList=parseUnits(unitsStr);
   renderUnits(unitList);
   const t0=Date.now();
@@ -754,10 +691,20 @@ async function showAlarm(type,addr,prio,unitsStr,timeoutMs){
   document.getElementById('incidentStreet').textContent=addr;
   document.getElementById('incidentPlace').textContent='Locatie opzoeken…';
 
-  let geo=await geocode(addr).catch(()=>null);
-  if(!geo){
-    const place=addr.split(/[,\s]+/).filter(Boolean).pop();
-    if(place) geo=await geocode(place).catch(()=>null);
+  // kandidaten opbouwen: meer context = betere straat-treffer
+  const cand=[];
+  const hw=(geoHint||'').split(' ').filter(Boolean);
+  if(hw.length>=3) cand.push(hw.slice(-3).join(' '));
+  if(hw.length>=2) cand.push(hw.slice(-2).join(' '));
+  if(addr) cand.push(addr);
+  const plaats=(geoHint||addr||'').split(/[,\s]+/).filter(Boolean).pop();
+  if(plaats) cand.push(plaats);
+  let geo=null;
+  for(const c of cand){
+    const uniq=c && c.trim();
+    if(!uniq) continue;
+    geo=await geocode(uniq).catch(()=>null);
+    if(geo) break;
   }
   if(geo){
     // label opsplitsen in straat / plaats waar mogelijk
@@ -814,14 +761,14 @@ function parseP2000(raw){
   const words=mid.split(' ').filter(Boolean);
   let type=mid, addr='';
   if(words.length>=3){ addr=words.slice(-2).join(' '); type=words.slice(0,-2).join(' '); }
-  return { prio, type, addr, units:caps.join(' ') };
+  return { prio, type, addr, units:caps.join(' '), mid };
 }
 document.getElementById('fireBtn').onclick=()=>{
   const raw=document.getElementById('fRaw').value.trim();
   if(!raw){document.getElementById('fRaw').focus();return;}
   const p=parseP2000(raw);
   panel.classList.remove('open');
-  showAlarm(p.type,p.addr,p.prio,p.units);
+  showAlarm(p.type,p.addr,p.prio,p.units,undefined,p.mid);
 };
 document.getElementById('clearBtn').onclick=()=>{ panel.classList.remove('open'); clearAlarm(); };
 </script>
