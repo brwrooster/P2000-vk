@@ -21,7 +21,8 @@ async function meldingJSON() {
     const items = parseEntries(xml);
     // nieuwste brandweermelding: titel bevat p1 / p2
     const melding = items.find(it => /\bp\s*[12]\b/i.test(it.title)) || null;
-    return new Response(JSON.stringify({ melding, count: items.length }), { headers });
+    const sample = items.slice(0, 4).map(it => ({ title: it.title, desc: it.desc }));
+    return new Response(JSON.stringify({ melding, count: items.length, sample }), { headers });
   } catch (e) {
     return new Response(JSON.stringify({ melding: null, error: String(e) }), { headers });
   }
