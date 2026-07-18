@@ -1,5 +1,5 @@
 // P2000 Post Veluwsekant - Worker: feed-endpoint (RSS + Atom) + statische pagina
-const FEED = "https://zwaailicht.nu/feed/meldingen/almere.xml";
+const FEED = "https://112-nu.nl/brandweer/rss";
 
 export default {
   async fetch(request, env) {
@@ -20,7 +20,8 @@ async function meldingJSON() {
     const xml = await r.text();
     const items = parseEntries(xml);
     // nieuwste brandweermelding: titel bevat p1 / p2
-    const melding = items.find(it => /\bp\s*[12]\b/i.test(it.title)) || null;
+    // testfase: geen filter, gewoon de nieuwste melding
+    const melding = items[0] || null;
     const sample = items.slice(0, 4).map(it => ({ title: it.title, desc: it.desc }));
     return new Response(JSON.stringify({ melding, count: items.length, sample }), { headers });
   } catch (e) {
