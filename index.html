@@ -157,6 +157,14 @@
   }
   #screen.prio-1 .incident{color:var(--prio1)}
   #screen.prio-2 .incident{color:var(--prio2)}
+  .incident-icon{
+    width:clamp(2.8rem,9vh,6rem);height:clamp(2.8rem,9vh,6rem);
+    color:var(--muted);
+  }
+  .incident-icon:empty{display:none}
+  .incident-icon svg{width:100%;height:100%;display:block}
+  #screen.prio-1 .incident-icon{color:var(--prio1)}
+  #screen.prio-2 .incident-icon{color:var(--prio2)}
   .addr{
     display:flex;flex-direction:column;gap:.35rem;
     border-left:4px solid var(--line);padding-left:1.1rem;
@@ -350,6 +358,7 @@
     </div>
     <div class="alarm-body">
       <div class="alarm-main">
+        <div class="incident-icon" id="incidentIcon"></div>
         <div class="eyebrow">Melding</div>
         <div class="incident" id="incidentType">—</div>
         <div class="addr">
@@ -465,6 +474,41 @@ function renderUnits(units){
   });
 }
 
+/* Eigen lijn-iconen per meldingssoort (kleuren mee met de prio) */
+function svgWrap(inner){
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" '+
+         'stroke-linecap="round" stroke-linejoin="round">'+inner+'</svg>';
+}
+const ICONS = {
+  brand: svgWrap('<path fill="currentColor" stroke="none" d="M13 2c.3 2.8-1.4 4.1-2.7 5.6C9 9.1 8 10.4 8 12.3a4 4 0 0 0 8 0c0-1.2-.4-2.2-1.1-3.1.1 1-.7 1.8-1.6 1.8 1.1-2.4-.8-4.6-.3-9Z"/>'),
+  water: svgWrap('<path d="M3 7.5c1.8 0 1.8 1.4 3.6 1.4S8.4 7.5 10.2 7.5s1.8 1.4 3.6 1.4S15.6 7.5 17.4 7.5 19.2 8.9 21 8.9"/><path d="M3 12c1.8 0 1.8 1.4 3.6 1.4S8.4 12 10.2 12s1.8 1.4 3.6 1.4S15.6 12 17.4 12 19.2 13.4 21 13.4"/><path d="M3 16.5c1.8 0 1.8 1.4 3.6 1.4S8.4 16.5 10.2 16.5s1.8 1.4 3.6 1.4S15.6 16.5 17.4 16.5 19.2 17.9 21 17.9"/>'),
+  dier: svgWrap('<ellipse cx="12" cy="15.5" rx="3.4" ry="2.8" fill="currentColor" stroke="none"/><circle cx="7.5" cy="11" r="1.5" fill="currentColor" stroke="none"/><circle cx="10.7" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="13.3" cy="8.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="16.5" cy="11" r="1.5" fill="currentColor" stroke="none"/>'),
+  verkeer: svgWrap('<path d="M5 14l1.5-4A2 2 0 0 1 8.4 8.7h7.2a2 2 0 0 1 1.9 1.3L19 14"/><rect x="3.5" y="14" width="17" height="4" rx="1"/><circle cx="7.5" cy="18" r="1.4" fill="currentColor" stroke="none"/><circle cx="16.5" cy="18" r="1.4" fill="currentColor" stroke="none"/>'),
+  medisch: svgWrap('<path fill="currentColor" stroke="none" d="M10 4h4v6h6v4h-6v6h-4v-6H4v-4h6z"/>'),
+  storm: svgWrap('<path d="M3 9h11a2.5 2.5 0 1 0-2.5-2.5"/><path d="M3 13h15a2.5 2.5 0 1 1-2.5 2.5"/><path d="M3 17h9"/>'),
+  alarm: svgWrap('<path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2H4.5L6 16Z"/><path d="M10 18.5a2 2 0 0 0 4 0"/>'),
+  gevaar: svgWrap('<path d="M12 4l8.5 15H3.5L12 4Z"/><path d="M12 10v4"/><circle cx="12" cy="16.6" r=".7" fill="currentColor" stroke="none"/>'),
+  lift: svgWrap('<rect x="5" y="4" width="14" height="16" rx="1.5"/><path d="M9 9l-1.5-2L6 9"/><path d="M6 14l1.5 2L9 14"/>'),
+  hulpverlening: svgWrap('<path d="M15.5 4.5a3.5 3.5 0 0 0-4.6 4.6l-6.1 6.1a1.6 1.6 0 0 0 2.3 2.3l6.1-6.1a3.5 3.5 0 0 0 4.6-4.6l-2.2 2.2-1.7-.4-.4-1.7 2-2Z"/>'),
+  default: svgWrap('<circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5"/><circle cx="12" cy="16.4" r=".7" fill="currentColor" stroke="none"/>')
+};
+function iconFor(type){
+  const t=(type||'').toLowerCase();
+  const has=(...k)=>k.some(x=>t.includes(x));
+  let key='default';
+  if(has('reanim','letsel','medisch','ademhal','aed','ambulance','onwel','hartstil')) key='medisch';
+  else if(has('water','drenkeling','duik','wateroverlast')) key='water';
+  else if(has('gas','gevaarlijke stof','stankoverlast','lekkage','co2','co ')) key='gevaar';
+  else if(has('lift')) key='lift';
+  else if(has('storm','wind','boom','omgewaaid')) key='storm';
+  else if(has('oms','automatische','brandmeld','loos','loze')) key='alarm';
+  else if(has('brand','rook','schoorsteen','vlam')) key='brand';
+  else if(has('dier')) key='dier';
+  else if(has('ongeval','aanrijding','verkeer','beknelling','vtc','vko')) key='verkeer';
+  else if(has('hulpverlening','assistentie','ondersteun','deur open')) key='hulpverlening';
+  return ICONS[key] || ICONS.default;
+}
+
 let selectedPrio = 2;
 let map, startMarker, incMarker, routeLine;
 let routeBounds=null, mapObserver=null;
@@ -561,6 +605,47 @@ function renderLastRun(){
 }
 renderLastRun();
 
+/* ================= Live feed (alarmeringen.nl, via de Worker) ================= */
+const FEED_ALARM_TIMEOUT_MS = 30 * 60 * 1000; // feed-melding blijft 30 min staan (testfase)
+let lastFeedId = null;
+function parseFeed(item){
+  const base = parseP2000(item.title||'');
+  let type = base.type, addr = base.addr;
+  const desc = (item.desc||'').trim();
+  if(desc){
+    const low = desc.toLowerCase();
+    const opIdx = low.indexOf(' op ');
+    const inIdx = low.lastIndexOf(' in ');
+    if(opIdx>-1 && inIdx>opIdx){
+      type = desc.slice(0,opIdx).trim();
+      const straat = desc.slice(opIdx+4,inIdx).trim();
+      const plaats = desc.slice(inIdx+4).trim();
+      addr = straat + (plaats ? ', '+plaats : '');
+    } else if(inIdx>-1){
+      type = desc.slice(0,inIdx).trim();
+      addr = desc.slice(inIdx+4).trim();
+    } else {
+      type = desc;
+    }
+  }
+  return { prio: base.prio, type, addr, units: base.units };
+}
+async function pollFeed(){
+  try{
+    const r = await fetch('/api/melding',{cache:'no-store'});
+    const d = await r.json();
+    setConn(!d.error);
+    const m = d.melding;
+    if(m && m.id !== lastFeedId){
+      lastFeedId = m.id;
+      const p = parseFeed(m);
+      showAlarm(p.type, p.addr, p.prio, p.units, FEED_ALARM_TIMEOUT_MS);
+    }
+  }catch(e){ setConn(false); }
+}
+setInterval(pollFeed, 10000);
+pollFeed();
+
 /* ================= Geocoding (PDOK Locatieserver) ================= */
 async function geocode(q){
   const url=`https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q=${encodeURIComponent(q)}`+
@@ -630,7 +715,7 @@ function initMap(dest){
 }
 
 /* ================= Alarm tonen / wissen ================= */
-async function showAlarm(type,addr,prio,unitsStr){
+async function showAlarm(type,addr,prio,unitsStr,timeoutMs){
   const screen=document.getElementById('screen');
   selectedPrio=prio;
   screen.classList.remove('prio-1','prio-2');
@@ -638,6 +723,7 @@ async function showAlarm(type,addr,prio,unitsStr){
 
   document.getElementById('prioLabel').textContent='Prioriteit '+prio;
   document.getElementById('incidentType').textContent=type||'Melding';
+  document.getElementById('incidentIcon').innerHTML=iconFor(type);
   const unitList=parseUnits(unitsStr);
   renderUnits(unitList);
   const t0=Date.now();
@@ -677,7 +763,7 @@ async function showAlarm(type,addr,prio,unitsStr){
 
   saveLastAlarm({ts:t0, type:type||'Melding', addr:lastAddr, units:unitList.map(u=>u.name)});
   clearTimeout(alarmTimer);
-  alarmTimer=setTimeout(clearAlarm,ALARM_TIMEOUT_MS);
+  alarmTimer=setTimeout(clearAlarm, timeoutMs || ALARM_TIMEOUT_MS);
 }
 function clearAlarm(){
   clearTimeout(alarmTimer);
@@ -709,7 +795,7 @@ function parseP2000(raw){
     .replace(/\bPRIO\s*[12]\b/i,'')
     .replace(/\bP\s*[12]\b/i,'')
     .replace(/\d{6,7}/g,'')
-    .replace(/\b[A-Z]{2,4}[-\s]?\d{1,2}\b/,'')   // meldkamer/regiocode, bv. BMD-01
+    .replace(/\b[A-Za-z]{2,4}[-\s]?\d{1,2}\b/,'')   // meldkamer/regiocode, bv. BMD-01 / bmd-04
     .replace(/\s+/g,' ').trim();
   const words=mid.split(' ').filter(Boolean);
   let type=mid, addr='';
