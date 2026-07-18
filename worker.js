@@ -1,5 +1,5 @@
-// P2000 Post Veluwsekant - Worker: feed-endpoint + statische pagina
-const FEED = "https://alarmeringen.nl/feeds/region/flevoland.rss";
+// P2000 Post Veluwsekant - Worker: feed-endpoint (RSS + Atom) + statische pagina
+const FEED = "https://zwaailicht.nu/feed/meldingen/almere.xml";
 
 export default {
   async fetch(request, env) {
@@ -18,30 +18,31 @@ async function meldingJSON() {
   try {
     const r = await fetch(FEED, { headers: { "user-agent": "p2000-veluwsekant/1.0" } });
     const xml = await r.text();
-    const items = parseItems(xml);
-    // nieuwste brandweermelding: titel begint met p1 / p2
-    const melding = items.find(it => /^\s*p\s*[12]\b/i.test(it.title)) || null;
-    return new Response(JSON.stringify({ melding }), { headers });
+    const items = parseEntries(xml);
+    // nieuwste brandweermelding: titel bevat p1 / p2
+    const melding = items.find(it => /\bp\s*[12]\b/i.test(it.title)) || null;
+    return new Response(JSON.stringify({ melding, count: items.length }), { headers });
   } catch (e) {
     return new Response(JSON.stringify({ melding: null, error: String(e) }), { headers });
   }
 }
 
-function parseItems(xml) {
-  const items = [];
-  const parts = xml.split(/<item[ >]/i).slice(1);
+// Leest zowel RSS (<item>) als Atom (<entry>)
+function parseEntries(xml) {
+  const isAtom = /<entry[\s>]/i.test(xml);
+  const name = isAtom ? "entry" : "item";
+  const parts = xml.split(new RegExp("<" + name + "[\\s>]", "i")).slice(1);
+  const out = [];
   for (const part of parts) {
-    const block = part.split(/<\/item>/i)[0];
+    const block = part.split(new RegExp("</" + name + ">", "i"))[0];
     const title = clean(tag(block, "title"));
     if (!title) continue;
-    items.push({
-      title,
-      desc: clean(tag(block, "description")),
-      pub: clean(tag(block, "pubDate")),
-      id: clean(tag(block, "guid") || tag(block, "link")) || title
-    });
+    const desc = clean(tag(block, "summary") || tag(block, "content") || tag(block, "description"));
+    const pub = clean(tag(block, "published") || tag(block, "updated") || tag(block, "pubDate"));
+    const id = clean(tag(block, "id") || tag(block, "guid") || linkHref(block)) || title;
+    out.push({ title, desc, pub, id });
   }
-  return items;
+  return out;
 }
 
 function tag(block, name) {
@@ -49,9 +50,15 @@ function tag(block, name) {
   return m ? m[1] : "";
 }
 
+function linkHref(block) {
+  const m = block.match(/<link[^>]*href="([^"]+)"/i);
+  return m ? m[1] : "";
+}
+
 function clean(s) {
   return (s || "")
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/<[^>]*>/g, " ")
     .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&#x27;/gi, "'")
     .replace(/\s+/g, " ").trim();
