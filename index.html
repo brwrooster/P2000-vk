@@ -801,6 +801,21 @@ if(!IS_LIVE){
   document.getElementById('logoLink').style.cursor='default';
 }
 
+/* Verborgen testtrigger (niet zichtbaar): toets 'T', of 3x snel op het logo tikken */
+document.addEventListener('keydown',function(e){
+  var tag=(e.target && e.target.tagName)||'';
+  if(tag==='INPUT'||tag==='TEXTAREA') return;
+  var code=e.keyCode||e.which;
+  if(code===84){ panel.classList.toggle('open'); }
+});
+var logoTaps=[];
+document.getElementById('logoLink').addEventListener('click',function(){
+  var now=Date.now();
+  logoTaps.push(now);
+  logoTaps=logoTaps.filter(function(t){ return now-t<1200; });
+  if(logoTaps.length>=3){ logoTaps=[]; panel.classList.add('open'); }
+});
+
 /* P2000-regel ontleden, bijv: "P 2 BMD-01 DIER TE WATER WINKELWEG ZEEWOLDE 254133 254152" */
 function parseP2000(raw){
   var s=(raw||'').replace(/\s+/g,' ').trim();
