@@ -43,13 +43,13 @@
   /* ---------- Topbalk ---------- */
   .topbar{
     display:flex;align-items:center;gap:.9rem;
-    padding:clamp(.9rem,2.2vh,1.6rem) clamp(1.2rem,3vw,2.4rem);
+    padding:2.2vh 3vw;
     border-bottom:1px solid var(--line);
     flex:0 0 auto;
     transition:background .4s ease, border-color .4s ease;
   }
   .mark{
-    width:clamp(30px,3.8vh,48px);height:clamp(30px,3.8vh,48px);
+    width:3.8vh;height:3.8vh;
     border-radius:7px;overflow:hidden;flex:0 0 auto;cursor:pointer;
     display:block;box-shadow:0 0 0 1px rgba(255,255,255,.1);
     -webkit-tap-highlight-color:transparent;
@@ -59,15 +59,15 @@
   .post-id .name{
     font-family:'Oswald',sans-serif;font-weight:600;
     letter-spacing:.06em;text-transform:uppercase;
-    font-size:clamp(1.05rem,2.5vh,1.7rem);
+    font-size:2.5vh;
   }
   .post-id .sub{
-    color:var(--muted);font-size:clamp(.68rem,1.4vh,.9rem);
+    color:var(--muted);font-size:1.4vh;
     letter-spacing:.16em;text-transform:uppercase;margin-top:.15rem;
   }
   .topbar .status{
     margin-left:auto;display:flex;align-items:center;gap:.55rem;
-    color:var(--muted);font-size:clamp(.72rem,1.5vh,.95rem);
+    color:var(--muted);font-size:1.5vh;
     font-family:'Roboto Mono',monospace;letter-spacing:.04em;
   }
   .dot{width:.6rem;height:.6rem;border-radius:50%;background:var(--ok)}
@@ -76,16 +76,16 @@
   .idle{
     flex:1;display:flex;flex-direction:column;
     align-items:center;justify-content:center;
-    gap:clamp(1.4rem,4vh,3rem);padding:2rem;
+    gap:4vh;padding:2rem;
   }
   .duty{
     font-family:'Oswald',sans-serif;font-weight:600;
     text-transform:uppercase;letter-spacing:.22em;
-    color:var(--accent);font-size:clamp(1.6rem,4.5vh,3.2rem);
+    color:var(--accent);font-size:4.5vh;
   }
   .clock{
     font-family:'Roboto Mono',monospace;font-weight:500;
-    font-size:clamp(4rem,20vh,15rem);line-height:.9;
+    font-size:20vh;line-height:.9;
     letter-spacing:.02em;
     font-variant-numeric:tabular-nums;
   }
@@ -93,28 +93,28 @@
   .date{
     font-family:'Oswald',sans-serif;font-weight:400;
     text-transform:uppercase;letter-spacing:.22em;
-    color:var(--muted);font-size:clamp(.9rem,2.4vh,1.6rem);
+    color:var(--muted);font-size:2.4vh;
   }
   .weather{
-    display:flex;align-items:center;gap:clamp(.7rem,2.2vw,1.4rem);
+    display:flex;align-items:center;gap:2.2vw;
     color:var(--muted);flex-wrap:wrap;justify-content:center;
   }
-  .weather .glyph{font-size:clamp(1.6rem,4vh,2.4rem);line-height:1}
+  .weather .glyph{font-size:4vh;line-height:1}
   .weather .temp{
     font-family:'Roboto Mono',monospace;font-weight:500;color:var(--text);
-    font-size:clamp(1.5rem,4vh,2.4rem);line-height:1;
+    font-size:4vh;line-height:1;
   }
   .weather .wx-meta{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap}
-  .weather .cond{font-size:clamp(.95rem,2.2vh,1.3rem);font-weight:500;color:var(--text)}
+  .weather .cond{font-size:2.2vh;font-weight:500;color:var(--text)}
   .weather .wind{
-    color:var(--muted);font-size:clamp(.82rem,1.7vh,1.05rem);
+    color:var(--muted);font-size:1.7vh;
     font-family:'Roboto Mono',monospace;letter-spacing:.02em;
   }
   .weather .sep{display:none}
   .last-run{
     color:var(--muted);opacity:.7;
     font-family:'Roboto Mono',monospace;letter-spacing:.04em;
-    font-size:clamp(.72rem,1.5vh,.95rem);
+    font-size:1.5vh;
   }
   .last-run:empty{display:none}
 
@@ -126,10 +126,10 @@
 
   .alarm-strip{
     flex:0 0 auto;display:flex;align-items:center;gap:1rem;
-    padding:clamp(.6rem,1.6vh,1rem) clamp(1.2rem,3vw,2.4rem);
+    padding:1.6vh 3vw;
     font-family:'Oswald',sans-serif;font-weight:700;
     text-transform:uppercase;letter-spacing:.14em;
-    font-size:clamp(1rem,2.8vh,1.9rem);
+    font-size:2.8vh;
     color:#0a0f1a;
   }
   .alarm-strip .when{
@@ -142,17 +142,17 @@
   .alarm-body{flex:1;display:flex;min-height:0}
   .alarm-main{
     flex:1;display:flex;flex-direction:column;justify-content:center;
-    gap:clamp(1rem,3vh,2rem);padding:clamp(1.4rem,4vw,3.4rem);min-width:0;
+    gap:3vh;padding:4vw;min-width:0;
   }
   .eyebrow{
     font-family:'Oswald',sans-serif;text-transform:uppercase;
     letter-spacing:.24em;color:var(--muted);
-    font-size:clamp(.75rem,1.7vh,1.1rem);
+    font-size:1.7vh;
   }
   .incident{
     font-family:'Oswald',sans-serif;font-weight:700;
     text-transform:uppercase;line-height:.94;
-    font-size:clamp(2.6rem,9.5vh,7rem);
+    font-size:9.5vh;
     word-break:normal;overflow-wrap:break-word;
   }
   #screen.prio-1 .incident{color:var(--prio1)}
@@ -162,17 +162,17 @@
     border-left:4px solid var(--line);padding-left:1.1rem;
   }
   .addr .street{
-    font-weight:600;font-size:clamp(1.4rem,4.4vh,3rem);line-height:1.05;
+    font-weight:600;font-size:4.4vh;line-height:1.05;
   }
   .addr .place{
-    color:var(--muted);font-size:clamp(1rem,2.4vh,1.5rem);
+    color:var(--muted);font-size:2.4vh;
     font-family:'Roboto Mono',monospace;letter-spacing:.02em;
   }
   .units{display:flex;flex-direction:column;gap:.7rem;padding-top:.3rem}
   .unit-chips{display:flex;flex-direction:column;gap:.4rem}
   .chip{
     display:flex;align-items:baseline;gap:.7rem;
-    font-size:clamp(1.05rem,2.6vh,1.6rem);font-weight:600;
+    font-size:2.6vh;font-weight:600;
   }
   .chip .cc{
     font-family:'Roboto Mono',monospace;font-weight:500;
@@ -181,7 +181,7 @@
   .chip.known .name{color:var(--accent)}
   .chip.unknown .name{color:var(--muted);font-weight:500}
   .footer-line{
-    color:var(--muted);font-size:clamp(.75rem,1.6vh,1rem);
+    color:var(--muted);font-size:1.6vh;
     font-family:'Roboto Mono',monospace;letter-spacing:.04em;padding-top:.2rem;
   }
 
@@ -202,11 +202,11 @@
   .route-badge .item{display:flex;flex-direction:column;gap:.15rem}
   .route-badge .k{
     color:var(--muted);text-transform:uppercase;letter-spacing:.14em;
-    font-size:clamp(.68rem,1.4vh,.9rem);
+    font-size:1.4vh;
   }
   .route-badge .v{
     font-family:'Roboto Mono',monospace;font-weight:700;
-    font-size:clamp(1.5rem,3.8vh,2.4rem);line-height:1;
+    font-size:3.8vh;line-height:1;
   }
   .route-badge .v.time{color:var(--accent)}
   .route-badge .vsep{width:1px;background:var(--line)}
@@ -240,14 +240,14 @@
   }
   #screen.is-alarm ~ .screen-footer{opacity:0}
   .source-credit{
-    font-family:'Roboto Mono',monospace;font-size:clamp(.58rem,1.15vh,.78rem);
+    font-family:'Roboto Mono',monospace;font-size:1.15vh;
     letter-spacing:.05em;color:var(--muted);opacity:.75;
   }
   .source-credit a{color:var(--accent);text-decoration:none;pointer-events:auto}
   .source-credit a:hover{text-decoration:underline}
   .brand-credit{
     color:var(--muted);opacity:.5;
-    font-family:'Inter',sans-serif;font-size:clamp(.42rem,.85vh,.55rem);
+    font-family:'Inter',sans-serif;font-size:.85vh;
     letter-spacing:.03em;line-height:1.45;
   }
   .brand-credit .mail{opacity:.85}
@@ -255,7 +255,7 @@
   #testPanel{
     position:fixed;inset:auto 0 0 0;z-index:1001;
     background:var(--panel);border-top:1px solid var(--line);
-    padding:1.1rem clamp(1rem,3vw,2rem) 1.4rem;
+    padding:1.1rem 3vw 1.4rem;
     transform:translateY(110%);transition:transform .28s ease;
     box-shadow:0 -12px 40px rgba(0,0,0,.45);
   }
