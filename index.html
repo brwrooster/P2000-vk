@@ -28,8 +28,8 @@
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
   body{
-    background:var(--bg);
-    color:var(--text);
+    background:#0a0f1a;
+    color:#eaf1fa;
     font-family:'Inter',system-ui,sans-serif;
     overflow:hidden;
     -webkit-font-smoothing:antialiased;
@@ -44,7 +44,7 @@
   .topbar{
     display:flex;align-items:center;gap:.9rem;
     padding:2.2vh 3vw;
-    border-bottom:1px solid var(--line);
+    border-bottom:1px solid #20304a;
     flex:0 0 auto;
     transition:background .4s ease, border-color .4s ease;
   }
@@ -62,15 +62,15 @@
     font-size:2.5vh;
   }
   .post-id .sub{
-    color:var(--muted);font-size:1.4vh;
+    color:#8395ad;font-size:1.4vh;
     letter-spacing:.16em;text-transform:uppercase;margin-top:.15rem;
   }
   .topbar .status{
     margin-left:auto;display:flex;align-items:center;gap:.55rem;
-    color:var(--muted);font-size:1.5vh;
+    color:#8395ad;font-size:1.5vh;
     font-family:'Roboto Mono',monospace;letter-spacing:.04em;
   }
-  .dot{width:.6rem;height:.6rem;border-radius:50%;background:var(--ok)}
+  .dot{width:.6rem;height:.6rem;border-radius:50%;background:#37d67a}
 
   /* ---------- IDLE ---------- */
   .idle{
@@ -81,7 +81,7 @@
   .duty{
     font-family:'Oswald',sans-serif;font-weight:600;
     text-transform:uppercase;letter-spacing:.22em;
-    color:var(--accent);font-size:4.5vh;
+    color:#3ec1ff;font-size:4.5vh;
   }
   .clock{
     font-family:'Roboto Mono',monospace;font-weight:500;
@@ -89,30 +89,30 @@
     letter-spacing:.02em;
     font-variant-numeric:tabular-nums;
   }
-  .clock .sec{color:var(--accent)}
+  .clock .sec{color:#3ec1ff}
   .date{
     font-family:'Oswald',sans-serif;font-weight:400;
     text-transform:uppercase;letter-spacing:.22em;
-    color:var(--muted);font-size:2.4vh;
+    color:#8395ad;font-size:2.4vh;
   }
   .weather{
     display:flex;align-items:center;gap:2.2vw;
-    color:var(--muted);flex-wrap:wrap;justify-content:center;
+    color:#8395ad;flex-wrap:wrap;justify-content:center;
   }
   .weather .glyph{font-size:4vh;line-height:1}
   .weather .temp{
-    font-family:'Roboto Mono',monospace;font-weight:500;color:var(--text);
+    font-family:'Roboto Mono',monospace;font-weight:500;color:#eaf1fa;
     font-size:4vh;line-height:1;
   }
   .weather .wx-meta{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap}
-  .weather .cond{font-size:2.2vh;font-weight:500;color:var(--text)}
+  .weather .cond{font-size:2.2vh;font-weight:500;color:#eaf1fa}
   .weather .wind{
-    color:var(--muted);font-size:1.7vh;
+    color:#8395ad;font-size:1.7vh;
     font-family:'Roboto Mono',monospace;letter-spacing:.02em;
   }
   .weather .sep{display:none}
   .last-run{
-    color:var(--muted);opacity:.7;
+    color:#8395ad;opacity:.7;
     font-family:'Roboto Mono',monospace;letter-spacing:.04em;
     font-size:1.5vh;
   }
@@ -122,7 +122,7 @@
   .alarm{display:none;flex:1;flex-direction:column}
   #screen.is-alarm .idle{display:none}
   #screen.is-alarm .alarm{display:flex}
-  #screen.is-alarm .topbar{background:var(--panel-2)}
+  #screen.is-alarm .topbar{background:#0e1524}
 
   .alarm-strip{
     flex:0 0 auto;display:flex;align-items:center;gap:1rem;
@@ -136,8 +136,8 @@
     margin-left:auto;font-family:'Roboto Mono',monospace;
     font-weight:500;letter-spacing:.02em;font-size:.8em;
   }
-  #screen.prio-1 .alarm-strip{background:var(--prio1)}
-  #screen.prio-2 .alarm-strip{background:var(--prio2)}
+  #screen.prio-1 .alarm-strip{background:#ff3b30}
+  #screen.prio-2 .alarm-strip{background:#ffc400}
 
   .alarm-body{flex:1;display:flex;min-height:0}
   .alarm-main{
@@ -146,7 +146,7 @@
   }
   .eyebrow{
     font-family:'Oswald',sans-serif;text-transform:uppercase;
-    letter-spacing:.24em;color:var(--muted);
+    letter-spacing:.24em;color:#8395ad;
     font-size:1.7vh;
   }
   .incident{
@@ -155,17 +155,17 @@
     font-size:9.5vh;
     word-break:normal;overflow-wrap:break-word;
   }
-  #screen.prio-1 .incident{color:var(--prio1)}
-  #screen.prio-2 .incident{color:var(--prio2)}
+  #screen.prio-1 .incident{color:#ff3b30}
+  #screen.prio-2 .incident{color:#ffc400}
   .addr{
     display:flex;flex-direction:column;gap:.35rem;
-    border-left:4px solid var(--line);padding-left:1.1rem;
+    border-left:4px solid #20304a;padding-left:1.1rem;
   }
   .addr .street{
     font-weight:600;font-size:4.4vh;line-height:1.05;
   }
   .addr .place{
-    color:var(--muted);font-size:2.4vh;
+    color:#8395ad;font-size:2.4vh;
     font-family:'Roboto Mono',monospace;letter-spacing:.02em;
   }
   .units{display:flex;flex-direction:column;gap:.7rem;padding-top:.3rem}
@@ -176,19 +176,19 @@
   }
   .chip .cc{
     font-family:'Roboto Mono',monospace;font-weight:500;
-    color:var(--muted);font-size:.72em;letter-spacing:.02em;
+    color:#8395ad;font-size:.72em;letter-spacing:.02em;
   }
-  .chip.known .name{color:var(--accent)}
-  .chip.unknown .name{color:var(--muted);font-weight:500}
+  .chip.known .name{color:#3ec1ff}
+  .chip.unknown .name{color:#8395ad;font-weight:500}
   .footer-line{
-    color:var(--muted);font-size:1.6vh;
+    color:#8395ad;font-size:1.6vh;
     font-family:'Roboto Mono',monospace;letter-spacing:.04em;padding-top:.2rem;
   }
 
   .alarm-side{
     flex:0 0 42%;max-width:42%;position:relative;
-    border-left:1px solid var(--line);
-    background:var(--panel-2);
+    border-left:1px solid #20304a;
+    background:#0e1524;
     display:flex;flex-direction:column;
   }
   #map{flex:1;width:100%;background:#e6ecf2}
@@ -196,21 +196,21 @@
     position:absolute;top:1rem;left:1rem;z-index:600;
     display:flex;gap:1.1rem;align-items:stretch;
     background:rgba(10,15,26,.86);backdrop-filter:blur(6px);
-    border:1px solid var(--line);border-radius:12px;
+    border:1px solid #20304a;border-radius:12px;
     padding:.7rem 1.1rem;
   }
   .route-badge .item{display:flex;flex-direction:column;gap:.15rem}
   .route-badge .k{
-    color:var(--muted);text-transform:uppercase;letter-spacing:.14em;
+    color:#8395ad;text-transform:uppercase;letter-spacing:.14em;
     font-size:1.4vh;
   }
   .route-badge .v{
     font-family:'Roboto Mono',monospace;font-weight:700;
     font-size:3.8vh;line-height:1;
   }
-  .route-badge .v.time{color:var(--accent)}
-  .route-badge .vsep{width:1px;background:var(--line)}
-  .route-badge.loading .v{color:var(--muted);font-weight:500}
+  .route-badge .v.time{color:#3ec1ff}
+  .route-badge .vsep{width:1px;background:#20304a}
+  .route-badge.loading .v{color:#8395ad;font-weight:500}
 
   .leaflet-container{font-family:'Roboto Mono',monospace}
   .pin{
@@ -218,20 +218,20 @@
     transform:rotate(-45deg);border:2px solid #0a0f1a;
     box-shadow:0 2px 6px rgba(0,0,0,.5);
   }
-  .pin.start{background:var(--accent)}
-  .pin.inc-1{background:var(--prio1)}
-  .pin.inc-2{background:var(--prio2)}
+  .pin.start{background:#3ec1ff}
+  .pin.inc-1{background:#ff3b30}
+  .pin.inc-2{background:#ffc400}
 
   /* ---------- Testpaneel ---------- */
   #testToggle{
     position:fixed;right:1rem;bottom:1rem;z-index:1000;
     font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:.14em;
     text-transform:uppercase;font-size:.8rem;
-    background:var(--panel);color:var(--text);
-    border:1px solid var(--line);border-radius:10px;
+    background:#111a2b;color:#eaf1fa;
+    border:1px solid #20304a;border-radius:10px;
     padding:.6rem 1rem;cursor:pointer;opacity:.5;transition:opacity .2s;
   }
-  #testToggle:hover,#testToggle:focus-visible{opacity:1;outline:2px solid var(--accent)}
+  #testToggle:hover,#testToggle:focus-visible{opacity:1;outline:2px solid #3ec1ff}
 
   .screen-footer{
     position:fixed;left:50%;bottom:.5rem;transform:translateX(-50%);
@@ -241,12 +241,12 @@
   #screen.is-alarm ~ .screen-footer{opacity:0}
   .source-credit{
     font-family:'Roboto Mono',monospace;font-size:1.15vh;
-    letter-spacing:.05em;color:var(--muted);opacity:.75;
+    letter-spacing:.05em;color:#8395ad;opacity:.75;
   }
-  .source-credit a{color:var(--accent);text-decoration:none;pointer-events:auto}
+  .source-credit a{color:#3ec1ff;text-decoration:none;pointer-events:auto}
   .source-credit a:hover{text-decoration:underline}
   .brand-credit{
-    color:var(--muted);opacity:.5;
+    color:#8395ad;opacity:.5;
     font-family:'Inter',sans-serif;font-size:.85vh;
     letter-spacing:.03em;line-height:1.45;
   }
@@ -254,7 +254,7 @@
 
   #testPanel{
     position:fixed;inset:auto 0 0 0;z-index:1001;
-    background:var(--panel);border-top:1px solid var(--line);
+    background:#111a2b;border-top:1px solid #20304a;
     padding:1.1rem 3vw 1.4rem;
     transform:translateY(110%);transition:transform .28s ease;
     box-shadow:0 -12px 40px rgba(0,0,0,.45);
@@ -264,14 +264,14 @@
     display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;
   }
   .tp-head .tag{
-    background:var(--brand);color:#fff;font-family:'Oswald',sans-serif;
+    background:#e30613;color:#fff;font-family:'Oswald',sans-serif;
     font-weight:600;letter-spacing:.14em;text-transform:uppercase;
     font-size:.7rem;padding:.2rem .5rem;border-radius:5px;
   }
   .tp-head h2{font-size:1rem;font-weight:600}
   .tp-head .close{
-    margin-left:auto;background:none;border:1px solid var(--line);
-    color:var(--muted);border-radius:8px;width:2rem;height:2rem;
+    margin-left:auto;background:none;border:1px solid #20304a;
+    color:#8395ad;border-radius:8px;width:2rem;height:2rem;
     cursor:pointer;font-size:1.1rem;line-height:1;
   }
   .tp-grid{
@@ -282,35 +282,35 @@
   .tp-actions{grid-column:1 / -1}
   .field{display:flex;flex-direction:column;gap:.35rem;min-width:0}
   .field label{
-    color:var(--muted);font-size:.7rem;text-transform:uppercase;
+    color:#8395ad;font-size:.7rem;text-transform:uppercase;
     letter-spacing:.12em;
   }
   .field input{
-    background:var(--panel-2);border:1px solid var(--line);
-    color:var(--text);border-radius:9px;padding:.7rem .8rem;
+    background:#0e1524;border:1px solid #20304a;
+    color:#eaf1fa;border-radius:9px;padding:.7rem .8rem;
     font-size:1rem;font-family:'Inter',sans-serif;width:100%;
   }
-  .field input:focus{outline:2px solid var(--accent);border-color:var(--accent)}
+  .field input:focus{outline:2px solid #3ec1ff;border-color:#3ec1ff}
   .prio-pick{display:flex;gap:.4rem}
   .prio-pick button{
-    flex:1;border:1px solid var(--line);background:var(--panel-2);
-    color:var(--muted);border-radius:9px;padding:.7rem .5rem;cursor:pointer;
+    flex:1;border:1px solid #20304a;background:#0e1524;
+    color:#8395ad;border-radius:9px;padding:.7rem .5rem;cursor:pointer;
     font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:.06em;
     text-transform:uppercase;font-size:.85rem;white-space:nowrap;
   }
-  .prio-pick button.sel[data-prio="1"]{background:var(--prio1);color:#0a0f1a;border-color:var(--prio1)}
-  .prio-pick button.sel[data-prio="2"]{background:var(--prio2);color:#0a0f1a;border-color:var(--prio2)}
+  .prio-pick button.sel[data-prio="1"]{background:#ff3b30;color:#0a0f1a;border-color:#ff3b30}
+  .prio-pick button.sel[data-prio="2"]{background:#ffc400;color:#0a0f1a;border-color:#ffc400}
   .tp-actions{display:flex;gap:.6rem}
   .btn{
     border:none;border-radius:9px;padding:.75rem 1.1rem;cursor:pointer;
     font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:.08em;
     text-transform:uppercase;font-size:.85rem;white-space:nowrap;
   }
-  .btn.primary{background:var(--accent);color:#04121f}
-  .btn.ghost{background:var(--panel-2);color:var(--text);border:1px solid var(--line)}
+  .btn.primary{background:#3ec1ff;color:#04121f}
+  .btn.ghost{background:#0e1524;color:#eaf1fa;border:1px solid #20304a}
   .btn:focus-visible{outline:2px solid #fff}
-  .tp-hint{color:var(--muted);font-size:.75rem;margin-top:.7rem;line-height:1.4}
-  .tp-hint b{color:var(--text);font-weight:600}
+  .tp-hint{color:#8395ad;font-size:.75rem;margin-top:.7rem;line-height:1.4}
+  .tp-hint b{color:#eaf1fa;font-weight:600}
 
   @media(prefers-reduced-motion:reduce){
     *{transition:none!important}
@@ -490,12 +490,13 @@ function fitToRoute(){
 }
 let alarmTimer = null;
 let alarmTick = null;
-let startCoords = { ...START_COORDS };
+let startCoords = { lat: START_COORDS.lat, lon: START_COORDS.lon };
+function pad2(n){ n = String(n); return n.length < 2 ? '0' + n : n; }
 
 /* ================= Klok ================= */
 function tick(){
   const now = new Date();
-  const p = n => String(n).padStart(2,'0');
+  const p = pad2;
   document.getElementById('dutyPloeg').textContent = currentPloeg(now) + '-ploeg';
   document.getElementById('hm').textContent = p(now.getHours())+':'+p(now.getMinutes());
   document.getElementById('ss').textContent = ':'+p(now.getSeconds());
@@ -521,23 +522,23 @@ function windDir(deg){
   const dirs=['N','NO','O','ZO','Z','ZW','W','NW'];
   return dirs[Math.round(deg/45)%8];
 }
-async function loadWeather(){
+function loadWeather(){
   const url=`https://api.open-meteo.com/v1/forecast?latitude=${ALMERE.lat}&longitude=${ALMERE.lon}`+
     `&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=kmh&timezone=Europe%2FAmsterdam`;
-  try{
-    const r=await fetch(url); const d=await r.json(); const c=d.current;
-    const [txt,glyph]=WMO[c.weather_code]||['—','·'];
-    document.getElementById('wxGlyph').textContent=glyph;
+  fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    const c=d.current;
+    const w=WMO[c.weather_code]||['—','·'];
+    document.getElementById('wxGlyph').textContent=w[1];
     document.getElementById('wxTemp').textContent=Math.round(c.temperature_2m)+'°';
-    document.getElementById('wxCond').textContent=txt;
+    document.getElementById('wxCond').textContent=w[0];
     document.getElementById('wxWind').textContent=
       `Wind ${windDir(c.wind_direction_10m)} ${Math.round(c.wind_speed_10m)} km/u · Almere`;
     setConn(true);
-  }catch(e){
+  }).catch(function(e){
     document.getElementById('wxCond').textContent='Weer niet beschikbaar';
     document.getElementById('wxWind').textContent='Almere';
     setConn(false);
-  }
+  });
 }
 loadWeather();
 setInterval(loadWeather,15*60*1000);
@@ -545,7 +546,7 @@ setInterval(loadWeather,15*60*1000);
 /* ================= Verbindingsindicator ================= */
 function setConn(ok){
   const online = ok && navigator.onLine;
-  document.getElementById('connDot').style.background = online ? 'var(--ok)' : 'var(--prio1)';
+  document.getElementById('connDot').style.background = online ? '#37d67a' : '#ff3b30';
   document.getElementById('connText').textContent = online ? 'Verbonden' : 'Geen verbinding';
 }
 window.addEventListener('online',()=>setConn(true));
@@ -563,7 +564,7 @@ function renderLastRun(){
   const el=document.getElementById('lastRun');
   if(!rec||!rec.ts){ el.textContent=''; return; }
   const d=new Date(rec.ts), now=new Date();
-  const p=n=>String(n).padStart(2,'0');
+  const p=pad2;
   const sameDay=d.toDateString()===now.toDateString();
   const tijd=p(d.getHours())+':'+p(d.getMinutes());
   const wanneer=sameDay?tijd:d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'})+' '+tijd;
@@ -585,10 +586,8 @@ function parseFeed(item){
   return parseP2000(src);
 }
 let firstPoll = true;
-async function pollFeed(){
-  try{
-    const r = await fetch('/api/melding',{cache:'no-store'});
-    const d = await r.json();
+function pollFeed(){
+  fetch('/api/melding',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(d){
     setConn(!d.error);
     const m = d.melding;
     if(m && m.id !== lastFeedId){
@@ -602,35 +601,36 @@ async function pollFeed(){
       }
     }
     firstPoll = false;
-  }catch(e){ setConn(false); }
+  }).catch(function(e){ setConn(false); });
 }
 setInterval(pollFeed, 10000);
 pollFeed();
 
 /* ================= Geocoding (PDOK Locatieserver) ================= */
-async function geocode(q){
+function geocode(q){
   const url=`https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q=${encodeURIComponent(q)}`+
     `&fl=weergavenaam,centroide_ll&rows=1`;
-  const r=await fetch(url); const d=await r.json();
-  const doc=d?.response?.docs?.[0];
-  if(!doc) return null;
-  const m=doc.centroide_ll.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/); // lon lat
-  return { lon:parseFloat(m[1]), lat:parseFloat(m[2]), label:doc.weergavenaam };
+  return fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    const doc = d && d.response && d.response.docs && d.response.docs[0];
+    if(!doc) return null;
+    const m=doc.centroide_ll.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/); // lon lat
+    if(!m) return null;
+    return { lon:parseFloat(m[1]), lat:parseFloat(m[2]), label:doc.weergavenaam };
+  });
 }
 // startpunt vast opzoeken
 // Startpunt (post) staat vast op vaste coördinaten; geen geocoding nodig.
 
 /* ================= Route (OSRM) ================= */
-async function loadRoute(dest){
+function loadRoute(dest){
   const badge=document.getElementById('routeBadge');
   badge.classList.add('loading');
   document.getElementById('routeTime').textContent='…';
   document.getElementById('routeDist').textContent='…';
   const url=`https://router.project-osrm.org/route/v1/driving/`+
     `${startCoords.lon},${startCoords.lat};${dest.lon},${dest.lat}?overview=full&geometries=geojson`;
-  try{
-    const r=await fetch(url); const d=await r.json();
-    const route=d.routes?.[0];
+  fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    const route=d.routes && d.routes[0];
     if(!route) throw new Error('geen route');
     const min=Math.round(route.duration/60);
     const km=(route.distance/1000).toFixed(1);
@@ -643,11 +643,11 @@ async function loadRoute(dest){
     routeBounds=routeLine.getBounds();
     fitToRoute();
     setTimeout(fitToRoute,250);
-  }catch(e){
+  }).catch(function(e){
     document.getElementById('routeTime').textContent='n.b.';
     document.getElementById('routeDist').textContent='n.b.';
     badge.classList.remove('loading');
-  }
+  });
 }
 
 /* ================= Kaart ================= */
@@ -703,7 +703,7 @@ window.addEventListener('resize',()=>{
     fitIncident(document.getElementById('incidentType').textContent);
   }
 });
-async function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
+function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
   const screen=document.getElementById('screen');
   selectedPrio=prio;
   screen.classList.remove('prio-1','prio-2');
@@ -716,11 +716,14 @@ async function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
   const t0=Date.now();
   document.getElementById('alarmWhen').textContent='00:00';
   clearInterval(alarmTick);
-  alarmTick=setInterval(()=>{
+  alarmTick=setInterval(function(){
     const s=Math.floor((Date.now()-t0)/1000);
     document.getElementById('alarmWhen').textContent=
-      String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+      pad2(Math.floor(s/60))+':'+pad2(s%60);
   },1000);
+
+  clearTimeout(alarmTimer);
+  alarmTimer=setTimeout(clearAlarm, timeoutMs || ALARM_TIMEOUT_MS);
 
   // adres tonen (voorlopig ruwe invoer, daarna verrijkt)
   let lastAddr=addr;
@@ -735,32 +738,31 @@ async function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
   if(addr) cand.push(addr);
   const plaats=(geoHint||addr||'').split(/[,\s]+/).filter(Boolean).pop();
   if(plaats) cand.push(plaats);
-  let geo=null;
-  for(const c of cand){
-    const uniq=c && c.trim();
-    if(!uniq) continue;
-    geo=await geocode(uniq).catch(()=>null);
-    if(geo) break;
-  }
-  if(geo){
-    // label opsplitsen in straat / plaats waar mogelijk
-    const street=geo.label.split(',')[0];
-    const place=geo.label.split(',').slice(1).join(',').trim()||'Almere';
-    document.getElementById('incidentStreet').textContent=street;
-    document.getElementById('incidentPlace').textContent=place;
-    lastAddr=street+', '+place;
-    initMap({lat:geo.lat,lon:geo.lon});
-    loadRoute({lat:geo.lat,lon:geo.lon});
-  }else{
-    document.getElementById('incidentPlace').textContent='Locatie niet gevonden';
-    document.getElementById('routeTime').textContent='n.b.';
-    document.getElementById('routeDist').textContent='n.b.';
-    document.getElementById('routeBadge').classList.remove('loading');
-  }
 
-  saveLastAlarm({ts:t0, type:type||'Melding', addr:lastAddr, units:unitList.map(u=>u.name)});
-  clearTimeout(alarmTimer);
-  alarmTimer=setTimeout(clearAlarm, timeoutMs || ALARM_TIMEOUT_MS);
+  function tryGeocode(i){
+    if(i>=cand.length) return Promise.resolve(null);
+    const uniq=cand[i] && cand[i].trim();
+    if(!uniq) return tryGeocode(i+1);
+    return geocode(uniq).then(function(g){ return g || tryGeocode(i+1); }, function(){ return tryGeocode(i+1); });
+  }
+  tryGeocode(0).then(function(geo){
+    if(geo){
+      // label opsplitsen in straat / plaats waar mogelijk
+      const street=geo.label.split(',')[0];
+      const place=geo.label.split(',').slice(1).join(',').trim()||'Almere';
+      document.getElementById('incidentStreet').textContent=street;
+      document.getElementById('incidentPlace').textContent=place;
+      lastAddr=street+', '+place;
+      initMap({lat:geo.lat,lon:geo.lon});
+      loadRoute({lat:geo.lat,lon:geo.lon});
+    }else{
+      document.getElementById('incidentPlace').textContent='Locatie niet gevonden';
+      document.getElementById('routeTime').textContent='n.b.';
+      document.getElementById('routeDist').textContent='n.b.';
+      document.getElementById('routeBadge').classList.remove('loading');
+    }
+    saveLastAlarm({ts:t0, type:type||'Melding', addr:lastAddr, units:unitList.map(u=>u.name)});
+  });
 }
 function clearAlarm(){
   clearTimeout(alarmTimer);
