@@ -20,8 +20,9 @@ async function meldingJSON() {
     const xml = await r.text();
     const items = parseEntries(xml);
     // nieuwste brandweermelding: titel bevat p1 / p2
-    // testmodus: nieuwste brandweermelding (alle capcodes, P1/P2)
-    const melding = items.find(it => /\bP\s*[12]\b/i.test(it.desc || it.title)) || null;
+    // filter op Post Veluwsekant: alleen capcodes 0700140 en 0700143 (met en zonder voorloopnul)
+    const CAP_RE = /\b(0700140|0700143|700140|700143)\b/;
+    const melding = items.find(it => CAP_RE.test((it.desc || "") + " " + (it.title || ""))) || null;
     return new Response(JSON.stringify({ melding, count: items.length }), { headers });
   } catch (e) {
     return new Response(JSON.stringify({ melding: null, error: String(e) }), { headers });
