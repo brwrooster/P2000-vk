@@ -210,6 +210,9 @@
   }
   .route-badge .v.time{color:#3ec1ff}
   .route-badge .vsep{width:1px;background:#20304a}
+  .wind-wrap{display:flex;align-items:center;gap:.5rem}
+  .windrose{width:6.5vh;height:6.5vh;display:block}
+  .wind-lbl{font-size:2.6vh !important}
   .route-badge.loading .v{color:#8395ad;font-weight:500}
 
   .leaflet-container{font-family:'Roboto Mono',monospace}
@@ -382,6 +385,24 @@
             <span class="k">Afstand</span>
             <span class="v" id="routeDist">—</span>
           </div>
+          <div class="vsep"></div>
+          <div class="item wind-item">
+            <span class="k">Wind</span>
+            <div class="wind-wrap">
+              <svg class="windrose" viewBox="0 0 100 100" aria-hidden="true">
+                <circle cx="50" cy="50" r="46" fill="none" stroke="#20304a" stroke-width="4"/>
+                <text x="50" y="19" text-anchor="middle" fill="#8395ad" font-size="17" font-family="Roboto Mono, monospace">N</text>
+                <text x="84" y="56" text-anchor="middle" fill="#8395ad" font-size="17" font-family="Roboto Mono, monospace">O</text>
+                <text x="50" y="92" text-anchor="middle" fill="#8395ad" font-size="17" font-family="Roboto Mono, monospace">Z</text>
+                <text x="16" y="56" text-anchor="middle" fill="#8395ad" font-size="17" font-family="Roboto Mono, monospace">W</text>
+                <g id="windArrow" transform="rotate(0 50 50)">
+                  <polygon points="50,20 43,52 57,52" fill="#3ec1ff"/>
+                  <polygon points="50,80 43,52 57,52" fill="#5a6b82"/>
+                </g>
+              </svg>
+              <span class="v wind-lbl" id="windLabel">—</span>
+            </div>
+          </div>
         </div>
         <div id="map"></div>
       </aside>
@@ -522,6 +543,14 @@ function windDir(deg){
   var dirs=['N','NO','O','ZO','Z','ZW','W','NW'];
   return dirs[Math.round(deg/45)%8];
 }
+var windDeg = null;
+function updateWindRose(){
+  var arrow=document.getElementById('windArrow');
+  var lbl=document.getElementById('windLabel');
+  if(windDeg==null){ if(lbl) lbl.textContent='—'; return; }
+  if(arrow) arrow.setAttribute('transform','rotate('+windDeg+' 50 50)');
+  if(lbl) lbl.textContent=windDir(windDeg);
+}
 function loadWeather(){
   var url='https://api.open-meteo.com/v1/forecast?latitude='+ALMERE.lat+'&longitude='+ALMERE.lon+
     '&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=kmh&timezone=Europe%2FAmsterdam';
@@ -533,6 +562,8 @@ function loadWeather(){
     document.getElementById('wxCond').textContent=w[0];
     document.getElementById('wxWind').textContent=
       'Wind '+windDir(c.wind_direction_10m)+' '+Math.round(c.wind_speed_10m)+' km/u · Almere';
+    windDeg = c.wind_direction_10m;
+    updateWindRose();
     setConn(true);
   }).catch(function(e){
     document.getElementById('wxCond').textContent='Weer niet beschikbaar';
@@ -711,6 +742,7 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
 
   document.getElementById('prioLabel').textContent='Prioriteit '+prio;
   fitIncident(type||'Melding');
+  updateWindRose();
   var unitList=parseUnits(unitsStr);
   renderUnits(unitList);
   var t0=Date.now();
