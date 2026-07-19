@@ -417,31 +417,31 @@
 
 <script>
 /* ================= Config ================= */
-const START_COORDS = { lat: 52.356938, lon: 5.247188 }; // Post Veluwsekant, Plus Code 964W+QV
-const ALMERE = { lat: 52.3746, lon: 5.2653 };           // weer
-const ALARM_TIMEOUT_MS = 5 * 60 * 1000;                 // 5 min
+var START_COORDS = { lat: 52.356938, lon: 5.247188 }; // Post Veluwsekant, Plus Code 964W+QV
+var ALMERE = { lat: 52.3746, lon: 5.2653 };           // weer
+var ALARM_TIMEOUT_MS = 5 * 60 * 1000;                 // 5 min
 
 // >>> Vul in na het deployen <<<
-const TEST_URL = "";  // URL van de TESTversie (waar de logo-klik op de live-pagina naartoe gaat)
+var TEST_URL = "";  // URL van de TESTversie (waar de logo-klik op de live-pagina naartoe gaat)
 
 // Zet op true voor de LIVE-pagina: de Test-knop verdwijnt, logo-klik gaat naar de test.
-const IS_LIVE = false;
+var IS_LIVE = false;
 
 // Capcodes waarop de live-feed straks filtert (alarms voor Post Veluwsekant).
-const FILTER_CAPCODES = ["0700140", "0700143"]; // 0700140 = TS, 0700143 = autoladder
+var FILTER_CAPCODES = ["0700140", "0700143"]; // 0700140 = TS, 0700143 = autoladder
 
 // Ploeg-rotatie: 24-uursdienst, wisselt om 07:00. 17 juni 2026 = D-ploeg.
-const PLOEG_ANKER = new Date(2026, 5, 17);   // maand 5 = juni
-const PLOEGEN = ['D', 'A', 'B', 'C'];
+var PLOEG_ANKER = new Date(2026, 5, 17);   // maand 5 = juni
+var PLOEGEN = ['D', 'A', 'B', 'C'];
 function currentPloeg(now){
-  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  var d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   if(now.getHours() < 7) d.setDate(d.getDate() - 1);
-  const days = Math.round((d - PLOEG_ANKER) / 86400000);
+  var days = Math.round((d - PLOEG_ANKER) / 86400000);
   return PLOEGEN[((days % 4) + 4) % 4];
 }
 
 // Capcode -> herkenbare naam (op laatste 4 cijfers). Hier vul je nieuwe eenheden bij.
-const UNITS = {
+var UNITS = {
   "4111": "Waterongevallenvoertuig Almere",
   "4112": "Brandweerboot",
   "4131": "Tankautospuit Poort",
@@ -457,46 +457,46 @@ const UNITS = {
   "0143": "Autoladder Veluwsekant"
 };
 function parseUnits(str){
-  const codes = (str||'').match(/\d{4,7}/g) || [];
-  return codes.map(code=>{
-    const name = UNITS[code.slice(-4)];
+  var codes = (str||'').match(/\d{4,7}/g) || [];
+  return codes.map(function(code){
+    var name = UNITS[code.slice(-4)];
     return { code, name: name || ('Eenheid ' + code), known: !!name };
   });
 }
 function renderUnits(units){
-  const wrap = document.getElementById('unitChips');
+  var wrap = document.getElementById('unitChips');
   wrap.innerHTML = '';
   if(!units.length){
     wrap.innerHTML = '<span class="chip unknown"><span class="name">Geen eenheden</span></span>';
     return;
   }
-  units.forEach(u=>{
-    const el = document.createElement('div');
+  units.forEach(function(u){
+    var el = document.createElement('div');
     el.className = 'chip ' + (u.known ? 'known' : 'unknown');
-    const n = document.createElement('span'); n.className='name'; n.textContent=u.name;
-    const c = document.createElement('span'); c.className='cc'; c.textContent=u.code;
+    var n = document.createElement('span'); n.className='name'; n.textContent=u.name;
+    var c = document.createElement('span'); c.className='cc'; c.textContent=u.code;
     el.appendChild(n); el.appendChild(c);
     wrap.appendChild(el);
   });
 }
 
-let selectedPrio = 2;
-let map, startMarker, incMarker, routeLine;
-let routeBounds=null, mapObserver=null;
+var selectedPrio = 2;
+var map, startMarker, incMarker, routeLine;
+var routeBounds=null, mapObserver=null;
 function fitToRoute(){
   if(!map||!routeBounds) return;
   map.invalidateSize();
   map.fitBounds(routeBounds,{padding:[30,30],maxZoom:14});
 }
-let alarmTimer = null;
-let alarmTick = null;
-let startCoords = { lat: START_COORDS.lat, lon: START_COORDS.lon };
+var alarmTimer = null;
+var alarmTick = null;
+var startCoords = { lat: START_COORDS.lat, lon: START_COORDS.lon };
 function pad2(n){ n = String(n); return n.length < 2 ? '0' + n : n; }
 
 /* ================= Klok ================= */
 function tick(){
-  const now = new Date();
-  const p = pad2;
+  var now = new Date();
+  var p = pad2;
   document.getElementById('dutyPloeg').textContent = currentPloeg(now) + '-ploeg';
   document.getElementById('hm').textContent = p(now.getHours())+':'+p(now.getMinutes());
   document.getElementById('ss').textContent = ':'+p(now.getSeconds());
@@ -506,7 +506,7 @@ function tick(){
 setInterval(tick,1000); tick();
 
 /* ================= Weer (Open-Meteo) ================= */
-const WMO = {
+var WMO = {
   0:['Onbewolkt','☀️'],1:['Overwegend helder','🌤️'],2:['Half bewolkt','⛅'],3:['Bewolkt','☁️'],
   45:['Mist','🌫️'],48:['Aanvriezende mist','🌫️'],
   51:['Lichte motregen','🌦️'],53:['Motregen','🌦️'],55:['Dichte motregen','🌦️'],
@@ -519,20 +519,20 @@ const WMO = {
   95:['Onweer','⛈️'],96:['Onweer met hagel','⛈️'],99:['Zwaar onweer','⛈️']
 };
 function windDir(deg){
-  const dirs=['N','NO','O','ZO','Z','ZW','W','NW'];
+  var dirs=['N','NO','O','ZO','Z','ZW','W','NW'];
   return dirs[Math.round(deg/45)%8];
 }
 function loadWeather(){
-  const url=`https://api.open-meteo.com/v1/forecast?latitude=${ALMERE.lat}&longitude=${ALMERE.lon}`+
-    `&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=kmh&timezone=Europe%2FAmsterdam`;
+  var url='https://api.open-meteo.com/v1/forecast?latitude='+ALMERE.lat+'&longitude='+ALMERE.lon+
+    '&current=temperature_2m,weather_code,wind_speed_10m,wind_direction_10m&wind_speed_unit=kmh&timezone=Europe%2FAmsterdam';
   fetch(url).then(function(r){ return r.json(); }).then(function(d){
-    const c=d.current;
-    const w=WMO[c.weather_code]||['—','·'];
+    var c=d.current;
+    var w=WMO[c.weather_code]||['—','·'];
     document.getElementById('wxGlyph').textContent=w[1];
     document.getElementById('wxTemp').textContent=Math.round(c.temperature_2m)+'°';
     document.getElementById('wxCond').textContent=w[0];
     document.getElementById('wxWind').textContent=
-      `Wind ${windDir(c.wind_direction_10m)} ${Math.round(c.wind_speed_10m)} km/u · Almere`;
+      'Wind '+windDir(c.wind_direction_10m)+' '+Math.round(c.wind_speed_10m)+' km/u · Almere';
     setConn(true);
   }).catch(function(e){
     document.getElementById('wxCond').textContent='Weer niet beschikbaar';
@@ -545,12 +545,12 @@ setInterval(loadWeather,15*60*1000);
 
 /* ================= Verbindingsindicator ================= */
 function setConn(ok){
-  const online = ok && navigator.onLine;
+  var online = ok && navigator.onLine;
   document.getElementById('connDot').style.background = online ? '#37d67a' : '#ff3b30';
   document.getElementById('connText').textContent = online ? 'Verbonden' : 'Geen verbinding';
 }
-window.addEventListener('online',()=>setConn(true));
-window.addEventListener('offline',()=>setConn(false));
+window.addEventListener('online',function(){ setConn(true); });
+window.addEventListener('offline',function(){ setConn(false); });
 setConn(navigator.onLine);
 
 /* ================= Laatste uitruk ================= */
@@ -559,16 +559,16 @@ function saveLastAlarm(rec){
   renderLastRun();
 }
 function renderLastRun(){
-  let rec=null;
+  var rec=null;
   try{ rec=JSON.parse(localStorage.getItem('p2000_last')); }catch(e){}
-  const el=document.getElementById('lastRun');
+  var el=document.getElementById('lastRun');
   if(!rec||!rec.ts){ el.textContent=''; return; }
-  const d=new Date(rec.ts), now=new Date();
-  const p=pad2;
-  const sameDay=d.toDateString()===now.toDateString();
-  const tijd=p(d.getHours())+':'+p(d.getMinutes());
-  const wanneer=sameDay?tijd:d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'})+' '+tijd;
-  const parts=['Laatste melding'];
+  var d=new Date(rec.ts), now=new Date();
+  var p=pad2;
+  var sameDay=d.toDateString()===now.toDateString();
+  var tijd=p(d.getHours())+':'+p(d.getMinutes());
+  var wanneer=sameDay?tijd:d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'})+' '+tijd;
+  var parts=['Laatste melding'];
   if(rec.type) parts.push(rec.type);
   if(rec.addr) parts.push(rec.addr);
   if(rec.units && rec.units.length) parts.push(rec.units.join(', '));
@@ -578,25 +578,25 @@ function renderLastRun(){
 renderLastRun();
 
 /* ================= Live feed (alarmeringen.nl, via de Worker) ================= */
-const FEED_ALARM_TIMEOUT_MS = 5 * 60 * 1000; // feed-melding blijft 5 min staan
-let lastFeedId = null;
+var FEED_ALARM_TIMEOUT_MS = 5 * 60 * 1000; // feed-melding blijft 5 min staan
+var lastFeedId = null;
 function parseFeed(item){
   // 112-nu: de omschrijving is de volledige P2000-regel; anders de titel
-  const src = (item.desc && item.desc.trim()) ? item.desc : (item.title||'');
+  var src = (item.desc && item.desc.trim()) ? item.desc : (item.title||'');
   return parseP2000(src);
 }
-let firstPoll = true;
+var firstPoll = true;
 function pollFeed(){
   fetch('/api/melding',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(d){
     setConn(!d.error);
-    const m = d.melding;
+    var m = d.melding;
     if(m && m.id !== lastFeedId){
-      const ageMs = m.pub ? (Date.now() - new Date(m.pub).getTime()) : 0;
-      const recent = ageMs >= 0 && ageMs < 20*60*1000;
+      var ageMs = m.pub ? (Date.now() - new Date(m.pub).getTime()) : 0;
+      var recent = ageMs >= 0 && ageMs < 20*60*1000;
       lastFeedId = m.id;
       // bij openen alleen tonen als recent; daarna elke echt nieuwe melding
       if(!firstPoll || recent){
-        const p = parseFeed(m);
+        var p = parseFeed(m);
         showAlarm(p.type, p.addr, p.prio, p.units, FEED_ALARM_TIMEOUT_MS, p.mid);
       }
     }
@@ -608,12 +608,12 @@ pollFeed();
 
 /* ================= Geocoding (PDOK Locatieserver) ================= */
 function geocode(q){
-  const url=`https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q=${encodeURIComponent(q)}`+
-    `&fl=weergavenaam,centroide_ll&rows=1`;
+  var url='https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q='+encodeURIComponent(q)+
+    '&fl=weergavenaam,centroide_ll&rows=1';
   return fetch(url).then(function(r){ return r.json(); }).then(function(d){
-    const doc = d && d.response && d.response.docs && d.response.docs[0];
+    var doc = d && d.response && d.response.docs && d.response.docs[0];
     if(!doc) return null;
-    const m=doc.centroide_ll.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/); // lon lat
+    var m=doc.centroide_ll.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/); // lon lat
     if(!m) return null;
     return { lon:parseFloat(m[1]), lat:parseFloat(m[2]), label:doc.weergavenaam };
   });
@@ -623,22 +623,22 @@ function geocode(q){
 
 /* ================= Route (OSRM) ================= */
 function loadRoute(dest){
-  const badge=document.getElementById('routeBadge');
+  var badge=document.getElementById('routeBadge');
   badge.classList.add('loading');
   document.getElementById('routeTime').textContent='…';
   document.getElementById('routeDist').textContent='…';
-  const url=`https://router.project-osrm.org/route/v1/driving/`+
-    `${startCoords.lon},${startCoords.lat};${dest.lon},${dest.lat}?overview=full&geometries=geojson`;
+  var url='https://router.project-osrm.org/route/v1/driving/'+
+    startCoords.lon+','+startCoords.lat+';'+dest.lon+','+dest.lat+'?overview=full&geometries=geojson';
   fetch(url).then(function(r){ return r.json(); }).then(function(d){
-    const route=d.routes && d.routes[0];
+    var route=d.routes && d.routes[0];
     if(!route) throw new Error('geen route');
-    const min=Math.round(route.duration/60);
-    const km=(route.distance/1000).toFixed(1);
+    var min=Math.round(route.duration/60);
+    var km=(route.distance/1000).toFixed(1);
     document.getElementById('routeTime').textContent=min+' min';
     document.getElementById('routeDist').textContent=km+' km';
     badge.classList.remove('loading');
     if(routeLine) routeLine.remove();
-    const latlngs=route.geometry.coordinates.map(c=>[c[1],c[0]]);
+    var latlngs=route.geometry.coordinates.map(function(c){ return [c[1],c[0]]; });
     routeLine=L.polyline(latlngs,{color:'#1565c0',weight:5,opacity:.9}).addTo(map);
     routeBounds=routeLine.getBounds();
     fitToRoute();
@@ -652,7 +652,7 @@ function loadRoute(dest){
 
 /* ================= Kaart ================= */
 function pinIcon(cls){
-  return L.divIcon({className:'',html:`<div class="pin ${cls}"></div>`,
+  return L.divIcon({className:'',html:'<div class="pin '+cls+'"></div>',
     iconSize:[22,22],iconAnchor:[11,22]});
 }
 function initMap(dest){
@@ -661,7 +661,7 @@ function initMap(dest){
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
       {maxZoom:19,subdomains:'abcd'}).addTo(map);
     if('ResizeObserver' in window){
-      mapObserver=new ResizeObserver(()=>fitToRoute());
+      mapObserver=new ResizeObserver(function(){ fitToRoute(); });
       mapObserver.observe(document.getElementById('map'));
     }
   }
@@ -672,25 +672,25 @@ function initMap(dest){
   incMarker=L.marker([dest.lat,dest.lon],{icon:pinIcon('inc-'+selectedPrio)})
     .addTo(map);
   map.setView([dest.lat,dest.lon],13);
-  setTimeout(()=>map.invalidateSize(),80);
+  setTimeout(function(){ map.invalidateSize(); },80);
 }
 
 /* ================= Alarm tonen / wissen ================= */
 function fitIncident(text){
-  const el=document.getElementById('incidentType');
+  var el=document.getElementById('incidentType');
   el.textContent=text||'Melding';
   el.style.fontSize=''; // reset naar CSS-standaard
-  const maxW=el.clientWidth-4;
+  var maxW=el.clientWidth-4;
   if(maxW<=0) return; // niet zichtbaar
-  const cs=getComputedStyle(el);
-  const longest=(text||'Melding').split(/\s+/).reduce((a,b)=>b.length>a.length?b:a,'');
-  const probe=document.createElement('span');
+  var cs=getComputedStyle(el);
+  var longest=(text||'Melding').split(/\s+/).reduce(function(a,b){ return b.length>a.length?b:a; },'');
+  var probe=document.createElement('span');
   probe.style.cssText='position:absolute;visibility:hidden;white-space:nowrap;'+
     'font-family:'+cs.fontFamily+';font-weight:'+cs.fontWeight+';'+
     'text-transform:'+cs.textTransform+';letter-spacing:'+cs.letterSpacing+';';
   probe.textContent=longest;
   document.body.appendChild(probe);
-  let size=parseFloat(cs.fontSize), guard=0;
+  var size=parseFloat(cs.fontSize), guard=0;
   probe.style.fontSize=size+'px';
   while(probe.getBoundingClientRect().width>maxW && size>18 && guard<200){
     size-=2; probe.style.fontSize=size+'px'; guard++;
@@ -698,26 +698,26 @@ function fitIncident(text){
   probe.remove();
   el.style.fontSize=size+'px';
 }
-window.addEventListener('resize',()=>{
+window.addEventListener('resize',function(){
   if(document.getElementById('screen').classList.contains('is-alarm')){
     fitIncident(document.getElementById('incidentType').textContent);
   }
 });
 function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
-  const screen=document.getElementById('screen');
+  var screen=document.getElementById('screen');
   selectedPrio=prio;
   screen.classList.remove('prio-1','prio-2');
   screen.classList.add('is-alarm','prio-'+prio);
 
   document.getElementById('prioLabel').textContent='Prioriteit '+prio;
   fitIncident(type||'Melding');
-  const unitList=parseUnits(unitsStr);
+  var unitList=parseUnits(unitsStr);
   renderUnits(unitList);
-  const t0=Date.now();
+  var t0=Date.now();
   document.getElementById('alarmWhen').textContent='00:00';
   clearInterval(alarmTick);
   alarmTick=setInterval(function(){
-    const s=Math.floor((Date.now()-t0)/1000);
+    var s=Math.floor((Date.now()-t0)/1000);
     document.getElementById('alarmWhen').textContent=
       pad2(Math.floor(s/60))+':'+pad2(s%60);
   },1000);
@@ -726,30 +726,30 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
   alarmTimer=setTimeout(clearAlarm, timeoutMs || ALARM_TIMEOUT_MS);
 
   // adres tonen (voorlopig ruwe invoer, daarna verrijkt)
-  let lastAddr=addr;
+  var lastAddr=addr;
   document.getElementById('incidentStreet').textContent=addr;
   document.getElementById('incidentPlace').textContent='Locatie opzoeken…';
 
   // kandidaten opbouwen: meer context = betere straat-treffer
-  const cand=[];
-  const hw=(geoHint||'').split(' ').filter(Boolean);
+  var cand=[];
+  var hw=(geoHint||'').split(' ').filter(Boolean);
   if(hw.length>=3) cand.push(hw.slice(-3).join(' '));
   if(hw.length>=2) cand.push(hw.slice(-2).join(' '));
   if(addr) cand.push(addr);
-  const plaats=(geoHint||addr||'').split(/[,\s]+/).filter(Boolean).pop();
+  var plaats=(geoHint||addr||'').split(/[,\s]+/).filter(Boolean).pop();
   if(plaats) cand.push(plaats);
 
   function tryGeocode(i){
     if(i>=cand.length) return Promise.resolve(null);
-    const uniq=cand[i] && cand[i].trim();
+    var uniq=cand[i] && cand[i].trim();
     if(!uniq) return tryGeocode(i+1);
     return geocode(uniq).then(function(g){ return g || tryGeocode(i+1); }, function(){ return tryGeocode(i+1); });
   }
   tryGeocode(0).then(function(geo){
     if(geo){
       // label opsplitsen in straat / plaats waar mogelijk
-      const street=geo.label.split(',')[0];
-      const place=geo.label.split(',').slice(1).join(',').trim()||'Almere';
+      var street=geo.label.split(',')[0];
+      var place=geo.label.split(',').slice(1).join(',').trim()||'Almere';
       document.getElementById('incidentStreet').textContent=street;
       document.getElementById('incidentPlace').textContent=place;
       lastAddr=street+', '+place;
@@ -761,23 +761,23 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
       document.getElementById('routeDist').textContent='n.b.';
       document.getElementById('routeBadge').classList.remove('loading');
     }
-    saveLastAlarm({ts:t0, type:type||'Melding', addr:lastAddr, units:unitList.map(u=>u.name)});
+    saveLastAlarm({ts:t0, type:type||'Melding', addr:lastAddr, units:unitList.map(function(u){ return u.name; })});
   });
 }
 function clearAlarm(){
   clearTimeout(alarmTimer);
   clearInterval(alarmTick);
-  const screen=document.getElementById('screen');
+  var screen=document.getElementById('screen');
   screen.classList.remove('is-alarm','prio-1','prio-2');
 }
 
 /* ================= Testpaneel ================= */
-const panel=document.getElementById('testPanel');
-document.getElementById('testToggle').onclick=()=>panel.classList.toggle('open');
-document.getElementById('tpClose').onclick=()=>panel.classList.remove('open');
+var panel=document.getElementById('testPanel');
+document.getElementById('testToggle').onclick=function(){ panel.classList.toggle('open'); };
+document.getElementById('tpClose').onclick=function(){ panel.classList.remove('open'); };
 
 /* Koppeling: logo -> testversie (alleen op de live-pagina actief) */
-document.getElementById('logoLink').onclick=()=>{ if(IS_LIVE && TEST_URL) location.href=TEST_URL; };
+document.getElementById('logoLink').onclick=function(){ if(IS_LIVE && TEST_URL) location.href=TEST_URL; };
 if(IS_LIVE){
   document.getElementById('testToggle').style.display='none';
 }else{
@@ -786,29 +786,29 @@ if(IS_LIVE){
 
 /* P2000-regel ontleden, bijv: "P 2 BMD-01 DIER TE WATER WINKELWEG ZEEWOLDE 254133 254152" */
 function parseP2000(raw){
-  let s=(raw||'').replace(/\s+/g,' ').trim();
-  const pm=s.match(/\bP\s*([12])\b/i) || s.match(/\bPRIO\s*([12])\b/i);
-  const prio=pm?parseInt(pm[1],10):selectedPrio;
-  const caps=s.match(/\d{6,7}/g)||[];
-  let mid=s
+  var s=(raw||'').replace(/\s+/g,' ').trim();
+  var pm=s.match(/\bP\s*([12])\b/i) || s.match(/\bPRIO\s*([12])\b/i);
+  var prio=pm?parseInt(pm[1],10):selectedPrio;
+  var caps=s.match(/\d{6,7}/g)||[];
+  var mid=s
     .replace(/\bPRIO\s*[12]\b/i,'')
     .replace(/\bP\s*[12]\b/i,'')
     .replace(/\d{6,7}/g,'')
     .replace(/\b[A-Za-z]{2,4}[-\s]?\d{1,2}\b/,'')   // meldkamer/regiocode, bv. BMD-01 / bmd-04
     .replace(/\s+/g,' ').trim();
-  const words=mid.split(' ').filter(Boolean);
-  let type=mid, addr='';
+  var words=mid.split(' ').filter(Boolean);
+  var type=mid, addr='';
   if(words.length>=3){ addr=words.slice(-2).join(' '); type=words.slice(0,-2).join(' '); }
   return { prio, type, addr, units:caps.join(' '), mid };
 }
-document.getElementById('fireBtn').onclick=()=>{
-  const raw=document.getElementById('fRaw').value.trim();
+document.getElementById('fireBtn').onclick=function(){
+  var raw=document.getElementById('fRaw').value.trim();
   if(!raw){document.getElementById('fRaw').focus();return;}
-  const p=parseP2000(raw);
+  var p=parseP2000(raw);
   panel.classList.remove('open');
   showAlarm(p.type,p.addr,p.prio,p.units,undefined,p.mid);
 };
-document.getElementById('clearBtn').onclick=()=>{ panel.classList.remove('open'); clearAlarm(); };
+document.getElementById('clearBtn').onclick=function(){ panel.classList.remove('open'); clearAlarm(); };
 </script>
 </body>
 </html>
