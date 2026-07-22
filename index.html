@@ -248,13 +248,23 @@
   }
   .brand-credit .mail{opacity:.85}
 
-  #testPanel{
+  #testPanel, #cfgPanel{
     position:fixed;inset:auto 0 0 0;z-index:1001;
     background:#111a2b;border-top:1px solid #20304a;
     padding:1.1rem 3vw 1.4rem;
     transform:translateY(110%);transition:transform .28s ease;
     box-shadow:0 -12px 40px rgba(0,0,0,.45);
   }
+  #cfgPanel{max-height:88vh;overflow-y:auto}
+  #cfgPanel.open{transform:translateY(0)}
+  .cfg-grid{display:flex;flex-direction:column;gap:.8rem}
+  .cfg-grid textarea{
+    background:#0e1524;border:1px solid #20304a;color:#eaf1fa;
+    border-radius:9px;padding:.7rem .8rem;font-size:.95rem;
+    font-family:'Roboto Mono',monospace;width:100%;resize:vertical;
+  }
+  .cfg-grid textarea:focus, #cfgPanel input:focus{outline:2px solid #3ec1ff;border-color:#3ec1ff}
+  .cfg-grid code{font-family:'Roboto Mono',monospace;color:#3ec1ff;font-size:.9em}
   #testPanel.open{transform:translateY(0)}
   .tp-head{
     display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;
@@ -425,7 +435,38 @@
       <button class="btn ghost" id="clearBtn">Terug naar rust</button>
     </div>
   </div>
-  <p class="tp-hint">Plak de P2000-regel en tik <b>Maak melding</b>. Prio (P 1 → prio 1, P 2 → prio 2), soort melding, adres en eenheden worden er automatisch uit gehaald. Adres wordt live opgezocht (PDOK); rijtijd vanaf Veluwsezoom&nbsp;52 (OSRM). Melding valt na 5&nbsp;min terug naar rust.</p>
+  <p class="tp-hint">Plak de P2000-regel en tik <b>Maak melding</b>. Prio (P 1 → prio 1, P 2 → prio 2), soort melding, adres en eenheden worden er automatisch uit gehaald. Adres wordt live opgezocht (PDOK); rijtijd vanaf de eigen post (OSRM).</p>
+</div>
+
+<div id="cfgPanel">
+  <div class="tp-head">
+    <span class="tag">Instellingen</span>
+    <h2>Configuratie</h2>
+    <button class="close" id="cfgClose" aria-label="Sluiten">×</button>
+  </div>
+  <div class="cfg-grid">
+    <div class="field">
+      <label for="cfgCaps">Capcodes van de post (spatie of komma gescheiden)</label>
+      <input id="cfgCaps" type="text" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="cfgHold">Melding blijft staan (minuten)</label>
+      <input id="cfgHold" type="number" min="1" max="120" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="cfgPosts">Posten — één per regel: <code>sleutel = naam, lat, lon</code></label>
+      <textarea id="cfgPosts" rows="4" spellcheck="false"></textarea>
+    </div>
+    <div class="field">
+      <label for="cfgUnits">Voertuigen — één per regel: <code>nummer = naam @ post</code></label>
+      <textarea id="cfgUnits" rows="7" spellcheck="false"></textarea>
+    </div>
+    <div class="tp-actions">
+      <button class="btn primary" id="cfgSave">Opslaan</button>
+      <button class="btn ghost" id="cfgReset">Standaard herstellen</button>
+    </div>
+  </div>
+  <p class="tp-hint" id="cfgMsg">Instellingen worden alleen op dit apparaat bewaard.</p>
 </div>
 
 <script>
@@ -440,29 +481,15 @@ var TEST_URL = "";  // URL van de TESTversie (waar de logo-klik op de live-pagin
 // Zet op true voor de LIVE-pagina: de Test-knop verdwijnt, logo-klik gaat naar de test.
 var IS_LIVE = false;
 
-// Capcodes waarop de live-feed straks filtert (alarms voor Post Veluwsekant).
-var FILTER_CAPCODES = ["0700140", "0700143"]; // 0700140 = TS, 0700143 = autoladder
-
-// Ploeg-rotatie: 24-uursdienst, wisselt om 07:00. 17 juni 2026 = D-ploeg.
-var PLOEG_ANKER = new Date(2026, 5, 17);   // maand 5 = juni
-var PLOEGEN = ['D', 'A', 'B', 'C'];
-function currentPloeg(now){
-  var d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  if(now.getHours() < 7) d.setDate(d.getDate() - 1);
-  var days = Math.round((d - PLOEG_ANKER) / 86400000);
-  return PLOEGEN[((days % 4) + 4) % 4];
-}
-
-// Capcode -> herkenbare naam (op laatste 4 cijfers). Hier vul je nieuwe eenheden bij.
-// Kazerne-locaties (uit Plus Codes)
-var POSTS = {
+/* ===== Standaardinstellingen (te overschrijven via het verborgen menu) ===== */
+var DEFAULT_CAPCODES = ["0700140", "0700143"]; // postcapcodes waarop gefilterd wordt
+var DEFAULT_POSTS = {
   veluwsekant: { naam:'Veluwsekant', lat:52.356938, lon:5.247188 },
   poort:       { naam:'Poort',       lat:52.353063, lon:5.171188 },
   buiten:      { naam:'Buiten',      lat:52.399938, lon:5.293188 },
   lelystad:    { naam:'Lelystad',    lat:52.501812, lon:5.478438 }
 };
-// Capcode -> eenheid (naam + thuispost). Hier vul je nieuwe eenheden bij.
-var UNITS = {
+var DEFAULT_UNITS = {
   "4111": { naam:"Waterongevallenvoertuig Almere", post:"poort" },
   "4112": { naam:"Brandweerboot",                  post:"veluwsekant" },
   "4131": { naam:"Tankautospuit Poort",            post:"poort" },
@@ -475,8 +502,55 @@ var UNITS = {
   "5152": { naam:"Autoladder Lelystad",            post:"lelystad" },
   "8131": { naam:"Reserve Tankautospuit",          post:null }
 };
-// Postcapcodes (alarmering van de post zelf, geen voertuig) - niet tonen als eenheid
-var POST_CAPCODES = ["0700140","0700143","700140","700143"];
+var DEFAULT_HOLD_MIN = 5;
+
+/* Actieve instellingen */
+var FILTER_CAPCODES = DEFAULT_CAPCODES.slice();
+var POSTS = DEFAULT_POSTS;
+var UNITS = DEFAULT_UNITS;
+var HOLD_MIN = DEFAULT_HOLD_MIN;
+var POST_CAPCODES = [];
+
+function refreshPostCapcodes(){
+  POST_CAPCODES = [];
+  for(var i=0;i<FILTER_CAPCODES.length;i++){
+    var c = String(FILTER_CAPCODES[i]).trim();
+    if(!c) continue;
+    POST_CAPCODES.push(c);
+    if(c.charAt(0)==='0') POST_CAPCODES.push(c.replace(/^0+/,''));
+    else POST_CAPCODES.push('0'+c);
+  }
+}
+function loadCfg(){
+  var cfg = null;
+  try{ cfg = JSON.parse(localStorage.getItem('p2000_cfg')); }catch(e){}
+  if(cfg){
+    if(cfg.capcodes && cfg.capcodes.length) FILTER_CAPCODES = cfg.capcodes;
+    if(cfg.posts) POSTS = cfg.posts;
+    if(cfg.units) UNITS = cfg.units;
+    if(cfg.holdMin) HOLD_MIN = cfg.holdMin;
+  }
+  refreshPostCapcodes();
+}
+function saveCfg(){
+  try{
+    localStorage.setItem('p2000_cfg', JSON.stringify({
+      capcodes: FILTER_CAPCODES, posts: POSTS, units: UNITS, holdMin: HOLD_MIN
+    }));
+  }catch(e){}
+}
+loadCfg();
+
+// Ploeg-rotatie: 24-uursdienst, wisselt om 07:00. 17 juni 2026 = D-ploeg.
+var PLOEG_ANKER = new Date(2026, 5, 17);   // maand 5 = juni
+var PLOEGEN = ['D', 'A', 'B', 'C'];
+function currentPloeg(now){
+  var d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if(now.getHours() < 7) d.setDate(d.getDate() - 1);
+  var days = Math.round((d - PLOEG_ANKER) / 86400000);
+  return PLOEGEN[((days % 4) + 4) % 4];
+}
+
 function parseUnits(str){
   var codes = (str||'').match(/\d{4,7}/g) || [];
   var out = [];
@@ -661,19 +735,31 @@ function renderLastRun(){
 }
 renderLastRun();
 
-/* ================= Live feed (alarmeringen.nl, via de Worker) ================= */
-var FEED_ALARM_TIMEOUT_MS = 5 * 60 * 1000; // feed-melding blijft 5 min staan
+/* ================= Live feed (112-nu, via de Worker) ================= */
 var lastFeedId = null;
 function parseFeed(item){
   // 112-nu: de omschrijving is de volledige P2000-regel; anders de titel
   var src = (item.desc && item.desc.trim()) ? item.desc : (item.title||'');
   return parseP2000(src);
 }
+function matchtCapcode(item){
+  var tekst = (item.desc || '') + ' ' + (item.title || '');
+  for(var i=0;i<POST_CAPCODES.length;i++){
+    var c = POST_CAPCODES[i];
+    if(!c) continue;
+    if(tekst.indexOf(c) !== -1) return true;
+  }
+  return false;
+}
 var firstPoll = true;
 function pollFeed(){
   fetch('/api/melding',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(d){
     setConn(!d.error);
-    var m = d.melding;
+    var lijst = d.meldingen || [];
+    var m = null;
+    for(var i=0;i<lijst.length;i++){
+      if(matchtCapcode(lijst[i])){ m = lijst[i]; break; }
+    }
     if(m && m.id !== lastFeedId){
       var ageMs = m.pub ? (Date.now() - new Date(m.pub).getTime()) : 0;
       var recent = ageMs >= 0 && ageMs < 20*60*1000;
@@ -681,7 +767,7 @@ function pollFeed(){
       // bij openen alleen tonen als recent; daarna elke echt nieuwe melding
       if(!firstPoll || recent){
         var p = parseFeed(m);
-        showAlarm(p.type, p.addr, p.prio, p.units, FEED_ALARM_TIMEOUT_MS, p.mid);
+        showAlarm(p.type, p.addr, p.prio, p.units, HOLD_MIN*60*1000, p.mid);
       }
     }
     firstPoll = false;
@@ -867,20 +953,104 @@ if(!IS_LIVE){
   document.getElementById('logoLink').style.cursor='default';
 }
 
-/* Verborgen testtrigger (niet zichtbaar): toets 'T', of 3x snel op het logo tikken */
+/* Verborgen triggers (niet zichtbaar):
+   - toets 'T'  of 3x snel op het logo  -> testpaneel
+   - toets 'S'  of 5x snel op het logo  -> instellingen */
+var cfgPanel = document.getElementById('cfgPanel');
 document.addEventListener('keydown',function(e){
   var tag=(e.target && e.target.tagName)||'';
   if(tag==='INPUT'||tag==='TEXTAREA') return;
   var code=e.keyCode||e.which;
-  if(code===84){ panel.classList.toggle('open'); }
+  if(code===84){ cfgPanel.classList.remove('open'); panel.classList.toggle('open'); }
+  if(code===83){ panel.classList.remove('open'); openCfg(); }
 });
 var logoTaps=[];
 document.getElementById('logoLink').addEventListener('click',function(){
   var now=Date.now();
   logoTaps.push(now);
-  logoTaps=logoTaps.filter(function(t){ return now-t<1200; });
-  if(logoTaps.length>=3){ logoTaps=[]; panel.classList.add('open'); }
+  logoTaps=logoTaps.filter(function(t){ return now-t<1600; });
+  if(logoTaps.length>=5){ logoTaps=[]; panel.classList.remove('open'); openCfg(); return; }
+  if(logoTaps.length===3){ panel.classList.add('open'); }
 });
+
+/* ---- Instellingenpaneel ---- */
+function postsNaarTekst(){
+  var r=[], k;
+  for(k in POSTS){ if(POSTS.hasOwnProperty(k)){
+    r.push(k+' = '+POSTS[k].naam+', '+POSTS[k].lat+', '+POSTS[k].lon);
+  }}
+  return r.join('\n');
+}
+function unitsNaarTekst(){
+  var r=[], k;
+  for(k in UNITS){ if(UNITS.hasOwnProperty(k)){
+    r.push(k+' = '+UNITS[k].naam+(UNITS[k].post ? ' @ '+UNITS[k].post : ''));
+  }}
+  return r.join('\n');
+}
+function tekstNaarPosts(txt){
+  var out={}, regels=(txt||'').split('\n'), i;
+  for(i=0;i<regels.length;i++){
+    var r=regels[i].trim(); if(!r) continue;
+    var d=r.split('='); if(d.length<2) continue;
+    var sleutel=d[0].trim().toLowerCase();
+    var v=d.slice(1).join('=').split(',');
+    if(v.length<3) continue;
+    var lat=parseFloat(v[v.length-2]), lon=parseFloat(v[v.length-1]);
+    if(isNaN(lat)||isNaN(lon)) continue;
+    out[sleutel]={ naam:v.slice(0,v.length-2).join(',').trim(), lat:lat, lon:lon };
+  }
+  return out;
+}
+function tekstNaarUnits(txt){
+  var out={}, regels=(txt||'').split('\n'), i;
+  for(i=0;i<regels.length;i++){
+    var r=regels[i].trim(); if(!r) continue;
+    var d=r.split('='); if(d.length<2) continue;
+    var nummer=d[0].trim();
+    var rest=d.slice(1).join('=');
+    var post=null, naam=rest;
+    var at=rest.indexOf('@');
+    if(at!==-1){ naam=rest.slice(0,at); post=rest.slice(at+1).trim().toLowerCase()||null; }
+    out[nummer]={ naam:naam.trim(), post:post };
+  }
+  return out;
+}
+function openCfg(){
+  document.getElementById('cfgCaps').value = FILTER_CAPCODES.join(' ');
+  document.getElementById('cfgHold').value = HOLD_MIN;
+  document.getElementById('cfgPosts').value = postsNaarTekst();
+  document.getElementById('cfgUnits').value = unitsNaarTekst();
+  document.getElementById('cfgMsg').textContent = 'Instellingen worden alleen op dit apparaat bewaard.';
+  cfgPanel.classList.add('open');
+}
+document.getElementById('cfgClose').onclick=function(){ cfgPanel.classList.remove('open'); };
+document.getElementById('cfgSave').onclick=function(){
+  var caps=document.getElementById('cfgCaps').value.match(/\d{4,7}/g)||[];
+  var hold=parseInt(document.getElementById('cfgHold').value,10);
+  var p=tekstNaarPosts(document.getElementById('cfgPosts').value);
+  var u=tekstNaarUnits(document.getElementById('cfgUnits').value);
+  var msg=document.getElementById('cfgMsg');
+  if(!caps.length){ msg.textContent='Let op: vul minstens één capcode in.'; return; }
+  FILTER_CAPCODES=caps;
+  HOLD_MIN=(!isNaN(hold)&&hold>0)?hold:DEFAULT_HOLD_MIN;
+  var telP=0,k; for(k in p){ if(p.hasOwnProperty(k)) telP++; }
+  var telU=0; for(k in u){ if(u.hasOwnProperty(k)) telU++; }
+  if(telP) POSTS=p;
+  if(telU) UNITS=u;
+  refreshPostCapcodes();
+  saveCfg();
+  lastFeedId=null; firstPoll=true;
+  msg.textContent='Opgeslagen. '+caps.length+' capcode(s), '+telU+' voertuigen, '+telP+' posten.';
+};
+document.getElementById('cfgReset').onclick=function(){
+  FILTER_CAPCODES=DEFAULT_CAPCODES.slice();
+  POSTS=DEFAULT_POSTS; UNITS=DEFAULT_UNITS; HOLD_MIN=DEFAULT_HOLD_MIN;
+  refreshPostCapcodes();
+  try{ localStorage.removeItem('p2000_cfg'); }catch(e){}
+  openCfg();
+  document.getElementById('cfgMsg').textContent='Standaardinstellingen hersteld.';
+};
 
 /* P2000-regel ontleden, bijv: "P 2 BMD-01 DIER TE WATER WINKELWEG ZEEWOLDE 254133 254152" */
 function parseP2000(raw){
