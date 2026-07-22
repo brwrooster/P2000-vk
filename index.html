@@ -179,6 +179,10 @@
   }
   .chip.known .name{color:#3ec1ff}
   .chip.unknown .name{color:#8395ad;font-weight:500}
+  .chip .eta{
+    font-family:'Roboto Mono',monospace;font-weight:700;
+    color:#3ec1ff;font-size:.8em;letter-spacing:.02em;
+  }
   .footer-line{
     color:#8395ad;font-size:1.6vh;
     font-family:'Roboto Mono',monospace;letter-spacing:.04em;padding-top:.2rem;
@@ -450,27 +454,43 @@ function currentPloeg(now){
 }
 
 // Capcode -> herkenbare naam (op laatste 4 cijfers). Hier vul je nieuwe eenheden bij.
-var UNITS = {
-  "4111": "Waterongevallenvoertuig Almere",
-  "4112": "Brandweerboot",
-  "4131": "Tankautospuit Poort",
-  "4132": "Tankautospuit Buiten",
-  "4133": "Tankautospuit Veluwsekant",
-  "4134": "Tankautospuit",
-  "4152": "Autoladder Veluwsekant",
-  "4171": "Hulpverleningsvoertuig",
-  "5111": "Waterongevallenvoertuig Lelystad",
-  "5152": "Autoladder Lelystad",
-  "8131": "Reserve Tankautospuit",
-  "0140": "Tankautospuit Veluwsekant",
-  "0143": "Autoladder Veluwsekant"
+// Kazerne-locaties (uit Plus Codes)
+var POSTS = {
+  veluwsekant: { naam:'Veluwsekant', lat:52.356938, lon:5.247188 },
+  poort:       { naam:'Poort',       lat:52.353063, lon:5.171188 },
+  buiten:      { naam:'Buiten',      lat:52.399938, lon:5.293188 },
+  lelystad:    { naam:'Lelystad',    lat:52.501812, lon:5.478438 }
 };
+// Capcode -> eenheid (naam + thuispost). Hier vul je nieuwe eenheden bij.
+var UNITS = {
+  "4111": { naam:"Waterongevallenvoertuig Almere", post:"poort" },
+  "4112": { naam:"Brandweerboot",                  post:"veluwsekant" },
+  "4131": { naam:"Tankautospuit Poort",            post:"poort" },
+  "4132": { naam:"Tankautospuit Buiten",           post:"buiten" },
+  "4133": { naam:"Tankautospuit Veluwsekant",      post:"veluwsekant" },
+  "4134": { naam:"Tankautospuit",                  post:"poort" },
+  "4152": { naam:"Autoladder Veluwsekant",         post:"veluwsekant" },
+  "4171": { naam:"Hulpverleningsvoertuig",         post:"buiten" },
+  "5111": { naam:"Waterongevallenvoertuig Lelystad", post:"lelystad" },
+  "5152": { naam:"Autoladder Lelystad",            post:"lelystad" },
+  "8131": { naam:"Reserve Tankautospuit",          post:null }
+};
+// Postcapcodes (alarmering van de post zelf, geen voertuig) - niet tonen als eenheid
+var POST_CAPCODES = ["0700140","0700143","700140","700143"];
 function parseUnits(str){
   var codes = (str||'').match(/\d{4,7}/g) || [];
-  return codes.map(function(code){
-    var name = UNITS[code.slice(-4)];
-    return { code, name: name || ('Eenheid ' + code), known: !!name };
+  var out = [];
+  codes.forEach(function(code){
+    if(POST_CAPCODES.indexOf(code) !== -1) return; // postcapcode, geen voertuig
+    var u = UNITS[code.slice(-4)];
+    out.push({
+      code: code,
+      name: u ? u.naam : ('Eenheid ' + code),
+      post: u ? u.post : null,
+      known: !!u
+    });
   });
+  return out;
 }
 function renderUnits(units){
   var wrap = document.getElementById('unitChips');
@@ -485,7 +505,52 @@ function renderUnits(units){
     var n = document.createElement('span'); n.className='name'; n.textContent=u.name;
     var c = document.createElement('span'); c.className='cc'; c.textContent=u.code;
     el.appendChild(n); el.appendChild(c);
+    if(u.post){
+      var e = document.createElement('span');
+      e.className='eta';
+      e.id='eta-'+u.code;
+      e.textContent='…';
+      el.appendChild(e);
+    }
     wrap.appendChild(el);
+  });
+}
+
+/* Rijtijd per eenheid vanaf de eigen kazerne (één OSRM-aanvraag voor alle posten) */
+function loadUnitETAs(units, dest){
+  var keys = [], i;
+  for(i=0;i<units.length;i++){
+    if(units[i].post && keys.indexOf(units[i].post)===-1) keys.push(units[i].post);
+  }
+  if(!keys.length) return;
+  var coords = [];
+  for(i=0;i<keys.length;i++){
+    coords.push(POSTS[keys[i]].lon + ',' + POSTS[keys[i]].lat);
+  }
+  coords.push(dest.lon + ',' + dest.lat);
+  var srcIdx = [];
+  for(i=0;i<keys.length;i++) srcIdx.push(i);
+  var url = 'https://router.project-osrm.org/table/v1/driving/' + coords.join(';') +
+            '?sources=' + srcIdx.join(';') + '&destinations=' + keys.length;
+  fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    if(!d.durations) throw new Error('geen tijden');
+    var perPost = {};
+    for(var k=0;k<keys.length;k++){
+      var row = d.durations[k];
+      var sec = row && row[0];
+      perPost[keys[k]] = (sec==null) ? null : Math.round(sec/60);
+    }
+    units.forEach(function(u){
+      var el = document.getElementById('eta-'+u.code);
+      if(!el) return;
+      var min = perPost[u.post];
+      el.textContent = (min==null) ? 'n.b.' : (min + ' min');
+    });
+  }).catch(function(){
+    units.forEach(function(u){
+      var el = document.getElementById('eta-'+u.code);
+      if(el) el.textContent = 'n.b.';
+    });
   });
 }
 
@@ -775,6 +840,7 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
       lastAddr=street+', '+place;
       initMap({lat:geo.lat,lon:geo.lon});
       loadRoute({lat:geo.lat,lon:geo.lon});
+      loadUnitETAs(unitList,{lat:geo.lat,lon:geo.lon});
     }else{
       document.getElementById('incidentPlace').textContent='Locatie niet gevonden';
       document.getElementById('routeTime').textContent='n.b.';
@@ -831,7 +897,7 @@ function parseP2000(raw){
   var words=mid.split(' ').filter(Boolean);
   var type=mid, addr='';
   if(words.length>=3){ addr=words.slice(-2).join(' '); type=words.slice(0,-2).join(' '); }
-  return { prio, type, addr, units:caps.join(' '), mid };
+  return { prio:prio, type:type, addr:addr, units:caps.join(' '), mid:mid };
 }
 document.getElementById('fireBtn').onclick=function(){
   var raw=document.getElementById('fRaw').value.trim();
