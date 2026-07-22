@@ -235,6 +235,22 @@
     pointer-events:none;transition:opacity .3s;
   }
   #screen.is-alarm ~ .screen-footer{opacity:0}
+  .task-bar{
+    position:fixed;left:0;right:0;bottom:5.2vh;z-index:500;
+    display:flex;flex-wrap:wrap;justify-content:center;
+    gap:.6rem 2.2vw;padding:0 3vw;
+    pointer-events:none;transition:opacity .3s;
+  }
+  .task-bar:empty{display:none}
+  #screen.is-alarm ~ .task-bar{opacity:0}
+  .task-bar .task{
+    display:flex;align-items:center;gap:.5rem;
+    color:#8395ad;font-size:1.9vh;letter-spacing:.02em;
+  }
+  .task-bar .task::before{
+    content:'';width:.45rem;height:.45rem;border-radius:50%;
+    background:#3ec1ff;opacity:.8;flex:0 0 auto;
+  }
   .source-credit{
     font-family:'Roboto Mono',monospace;font-size:1.15vh;
     letter-spacing:.05em;color:#8395ad;opacity:.75;
@@ -265,6 +281,28 @@
   }
   .cfg-grid textarea:focus, #cfgPanel input:focus{outline:2px solid #3ec1ff;border-color:#3ec1ff}
   .cfg-grid code{font-family:'Roboto Mono',monospace;color:#3ec1ff;font-size:.9em}
+  .task-row{
+    display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;
+    padding:.55rem 0;border-bottom:1px solid #20304a;
+  }
+  .task-row input.taskname{
+    flex:1 1 12rem;min-width:9rem;
+    background:#0e1524;border:1px solid #20304a;color:#eaf1fa;
+    border-radius:9px;padding:.6rem .7rem;font-size:.95rem;
+  }
+  .day-picker{display:flex;gap:.25rem;flex-wrap:wrap}
+  .day-picker button{
+    width:2.3rem;padding:.45rem 0;cursor:pointer;
+    background:#0e1524;border:1px solid #20304a;color:#8395ad;
+    border-radius:7px;font-family:'Oswald',sans-serif;font-weight:600;
+    text-transform:uppercase;font-size:.75rem;letter-spacing:.04em;
+  }
+  .day-picker button.on{background:#3ec1ff;border-color:#3ec1ff;color:#04121f}
+  .task-row .del{
+    background:none;border:1px solid #20304a;color:#8395ad;
+    border-radius:7px;width:2.1rem;height:2.1rem;cursor:pointer;font-size:1rem;line-height:1;
+  }
+  #cfgTaskAdd{margin-top:.6rem}
   #testPanel.open{transform:translateY(0)}
   .tp-head{
     display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;
@@ -414,6 +452,7 @@
 </div>
 
 <!-- Testknop + paneel -->
+<div class="task-bar" id="taskBar"></div>
 <div class="screen-footer">
   <div class="source-credit">Inhoud van <a href="https://112-nu.nl" target="_blank" rel="noopener">112-nu.nl</a></div>
   <div class="brand-credit">© 2026 R-Tech | Web Development by Bos. All rights reserved.<br><span class="mail">richardbos@icloud.com</span></div>
@@ -461,6 +500,11 @@
       <label for="cfgUnits">Voertuigen — één per regel: <code>nummer = naam @ post</code></label>
       <textarea id="cfgUnits" rows="7" spellcheck="false"></textarea>
     </div>
+    <div class="field">
+      <label>Werkzaamheden — kies per taak de dagen (niets aan = elke dag)</label>
+      <div id="cfgTaskList"></div>
+      <button class="btn ghost" id="cfgTaskAdd" type="button">+ Taak toevoegen</button>
+    </div>
     <div class="tp-actions">
       <button class="btn primary" id="cfgSave">Opslaan</button>
       <button class="btn ghost" id="cfgReset">Standaard herstellen</button>
@@ -503,12 +547,18 @@ var DEFAULT_UNITS = {
   "8131": { naam:"Reserve Tankautospuit",          post:null }
 };
 var DEFAULT_HOLD_MIN = 5;
+var DEFAULT_TASKS = [
+  { tekst:"Materiaalcontrole", dagen:["ma"] },
+  { tekst:"Oefenavond",        dagen:["di"] },
+  { tekst:"Voertuigcontrole",  dagen:[] }
+];
 
 /* Actieve instellingen */
 var FILTER_CAPCODES = DEFAULT_CAPCODES.slice();
 var POSTS = DEFAULT_POSTS;
 var UNITS = DEFAULT_UNITS;
 var HOLD_MIN = DEFAULT_HOLD_MIN;
+var TASKS = DEFAULT_TASKS.slice();
 var POST_CAPCODES = [];
 
 function refreshPostCapcodes(){
@@ -529,17 +579,60 @@ function loadCfg(){
     if(cfg.posts) POSTS = cfg.posts;
     if(cfg.units) UNITS = cfg.units;
     if(cfg.holdMin) HOLD_MIN = cfg.holdMin;
+    if(cfg.tasks) TASKS = normaliseerTaken(cfg.tasks);
   }
   refreshPostCapcodes();
+}
+var DAGCODES = ['zo','ma','di','wo','do','vr','za'];
+function normaliseerTaken(lijst){
+  var out=[], i;
+  for(i=0;i<lijst.length;i++){
+    var t=lijst[i];
+    if(t && typeof t==='object'){
+      out.push({ tekst:String(t.tekst||'').trim(), dagen:t.dagen||[] });
+      continue;
+    }
+    // oude notatie: "ma: Materiaalcontrole"
+    var r=String(t||'').trim(); if(!r) continue;
+    var dagen=[], tekst=r, dp=r.indexOf(':');
+    if(dp>0 && dp<=9){
+      var d=r.slice(0,dp).trim().toLowerCase().slice(0,2);
+      if(DAGCODES.indexOf(d)!==-1){ dagen=[d]; tekst=r.slice(dp+1).trim(); }
+    }
+    out.push({ tekst:tekst, dagen:dagen });
+  }
+  return out;
 }
 function saveCfg(){
   try{
     localStorage.setItem('p2000_cfg', JSON.stringify({
-      capcodes: FILTER_CAPCODES, posts: POSTS, units: UNITS, holdMin: HOLD_MIN
+      capcodes: FILTER_CAPCODES, posts: POSTS, units: UNITS,
+      holdMin: HOLD_MIN, tasks: TASKS
     }));
   }catch(e){}
 }
 loadCfg();
+
+/* Werkzaamheden van vandaag tonen */
+function renderTasks(){
+  var bar = document.getElementById('taskBar');
+  if(!bar) return;
+  var vandaag = DAGCODES[new Date().getDay()];
+  bar.innerHTML = '';
+  for(var i=0;i<TASKS.length;i++){
+    var t = TASKS[i];
+    if(!t || !t.tekst) continue;
+    var dagen = t.dagen || [];
+    if(dagen.length && dagen.indexOf(vandaag) === -1) continue;
+    var el = document.createElement('div');
+    el.className = 'task';
+    el.textContent = t.tekst;
+    bar.appendChild(el);
+  }
+  taskDag = new Date().getDay();
+}
+var taskDag = -1;
+renderTasks();
 
 // Ploeg-rotatie: 24-uursdienst, wisselt om 07:00. 17 juni 2026 = D-ploeg.
 var PLOEG_ANKER = new Date(2026, 5, 17);   // maand 5 = juni
@@ -650,6 +743,7 @@ function tick(){
   document.getElementById('ss').textContent = ':'+p(now.getSeconds());
   document.getElementById('dateText').textContent =
     now.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+  if(now.getDay() !== taskDag) renderTasks();
 }
 setInterval(tick,1000); tick();
 
@@ -1016,12 +1110,75 @@ function tekstNaarUnits(txt){
   }
   return out;
 }
+/* ---- Takeneditor met dagknoppen ---- */
+var DAGLABELS = [['ma','Ma'],['di','Di'],['wo','Wo'],['do','Do'],['vr','Vr'],['za','Za'],['zo','Zo']];
+function taakRij(taak){
+  var rij = document.createElement('div');
+  rij.className = 'task-row';
+
+  var naam = document.createElement('input');
+  naam.type = 'text'; naam.className = 'taskname';
+  naam.placeholder = 'bijv. Auto wassen';
+  naam.value = taak.tekst || '';
+  rij.appendChild(naam);
+
+  var picker = document.createElement('div');
+  picker.className = 'day-picker';
+  var gekozen = (taak.dagen || []).slice();
+  for(var i=0;i<DAGLABELS.length;i++){
+    (function(code,label){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = label;
+      b.setAttribute('data-dag', code);
+      if(gekozen.indexOf(code) !== -1) b.className = 'on';
+      b.onclick = function(){
+        if(b.className === 'on') b.className = '';
+        else b.className = 'on';
+      };
+      picker.appendChild(b);
+    })(DAGLABELS[i][0], DAGLABELS[i][1]);
+  }
+  rij.appendChild(picker);
+
+  var del = document.createElement('button');
+  del.type = 'button'; del.className = 'del'; del.textContent = '×';
+  del.title = 'Verwijderen';
+  del.onclick = function(){ rij.parentNode.removeChild(rij); };
+  rij.appendChild(del);
+
+  return rij;
+}
+function vulTaakEditor(){
+  var lijst = document.getElementById('cfgTaskList');
+  lijst.innerHTML = '';
+  for(var i=0;i<TASKS.length;i++) lijst.appendChild(taakRij(TASKS[i]));
+  if(!TASKS.length) lijst.appendChild(taakRij({tekst:'',dagen:[]}));
+}
+function leesTaakEditor(){
+  var out = [], rijen = document.getElementById('cfgTaskList').children;
+  for(var i=0;i<rijen.length;i++){
+    var naam = rijen[i].querySelector('.taskname');
+    var tekst = naam ? naam.value.trim() : '';
+    if(!tekst) continue;
+    var dagen = [], knoppen = rijen[i].querySelectorAll('.day-picker button');
+    for(var j=0;j<knoppen.length;j++){
+      if(knoppen[j].className === 'on') dagen.push(knoppen[j].getAttribute('data-dag'));
+    }
+    out.push({ tekst:tekst, dagen:dagen });
+  }
+  return out;
+}
+document.getElementById('cfgTaskAdd').onclick = function(){
+  document.getElementById('cfgTaskList').appendChild(taakRij({tekst:'',dagen:[]}));
+};
+
 function openCfg(){
   document.getElementById('cfgCaps').value = FILTER_CAPCODES.join(' ');
   document.getElementById('cfgHold').value = HOLD_MIN;
   document.getElementById('cfgPosts').value = postsNaarTekst();
   document.getElementById('cfgUnits').value = unitsNaarTekst();
-  document.getElementById('cfgMsg').textContent = 'Instellingen worden alleen op dit apparaat bewaard.';
+  vulTaakEditor();  document.getElementById('cfgMsg').textContent = 'Instellingen worden alleen op dit apparaat bewaard.';
   cfgPanel.classList.add('open');
 }
 document.getElementById('cfgClose').onclick=function(){ cfgPanel.classList.remove('open'); };
@@ -1038,16 +1195,21 @@ document.getElementById('cfgSave').onclick=function(){
   var telU=0; for(k in u){ if(u.hasOwnProperty(k)) telU++; }
   if(telP) POSTS=p;
   if(telU) UNITS=u;
+  var tks=leesTaakEditor();
+  TASKS=tks;
   refreshPostCapcodes();
   saveCfg();
+  renderTasks();
   lastFeedId=null; firstPoll=true;
   msg.textContent='Opgeslagen. '+caps.length+' capcode(s), '+telU+' voertuigen, '+telP+' posten.';
 };
 document.getElementById('cfgReset').onclick=function(){
   FILTER_CAPCODES=DEFAULT_CAPCODES.slice();
   POSTS=DEFAULT_POSTS; UNITS=DEFAULT_UNITS; HOLD_MIN=DEFAULT_HOLD_MIN;
+  TASKS=DEFAULT_TASKS.slice();
   refreshPostCapcodes();
   try{ localStorage.removeItem('p2000_cfg'); }catch(e){}
+  renderTasks();
   openCfg();
   document.getElementById('cfgMsg').textContent='Standaardinstellingen hersteld.';
 };
