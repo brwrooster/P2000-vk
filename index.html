@@ -493,6 +493,7 @@
     </div>
     <div class="tp-actions">
       <button class="btn primary" id="fireBtn">Maak melding</button>
+      <button class="btn primary" id="allesBtn">Naar alle schermen</button>
       <button class="btn ghost" id="clearBtn">Terug naar rust</button>
     </div>
   </div>
@@ -1446,6 +1447,31 @@ document.getElementById('fireBtn').onclick=function(){
   var p=parseP2000(raw);
   panel.classList.remove('open');
   showAlarm(p.type,p.addr,p.prio,p.units,undefined,p.mid);
+};
+
+/* Melding naar alle schermen sturen (via de Worker, net als de eigen ontvanger) */
+document.getElementById('allesBtn').onclick=function(){
+  var knop=document.getElementById('allesBtn');
+  var raw=document.getElementById('fRaw').value.trim();
+  var hint=document.querySelector('#testPanel .tp-hint');
+  if(!raw){document.getElementById('fRaw').focus();return;}
+  knop.textContent='Versturen…';
+  fetch('/api/pi',{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body: JSON.stringify({ text: raw, sleutel: 'veluwsekant2026' })
+  }).then(function(r){ return r.json(); }).then(function(d){
+    knop.textContent='Naar alle schermen';
+    if(d && d.ok){
+      panel.classList.remove('open');
+      if(hint) hint.textContent='Melding verstuurd naar alle schermen.';
+    }else{
+      if(hint) hint.textContent='Versturen mislukt' + ((d && d.error) ? ': '+d.error : '') + '.';
+    }
+  }).catch(function(){
+    knop.textContent='Naar alle schermen';
+    if(hint) hint.textContent='Versturen mislukt (geen verbinding).';
+  });
 };
 document.getElementById('clearBtn').onclick=function(){ panel.classList.remove('open'); clearAlarm(); };
 </script>
