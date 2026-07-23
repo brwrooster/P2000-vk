@@ -634,6 +634,28 @@ function renderTasks(){
 var taskDag = -1;
 renderTasks();
 
+/* Taken centraal ophalen (zodat elk scherm dezelfde lijst toont) */
+function haalTakenCentraal(){
+  return fetch('/api/taken',{cache:'no-store'}).then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d && d.tasks && d.tasks.length){
+        TASKS = normaliseerTaken(d.tasks);
+        renderTasks();
+        return true;
+      }
+      return false;
+    }).catch(function(){ return false; });
+}
+function bewaarTakenCentraal(){
+  return fetch('/api/taken',{
+    method:'PUT',
+    headers:{'content-type':'application/json'},
+    body: JSON.stringify({ tasks: TASKS })
+  }).then(function(r){ return r.json(); }).catch(function(){ return { error:'niet bereikbaar' }; });
+}
+haalTakenCentraal();
+setInterval(haalTakenCentraal, 5*60*1000);
+
 // Ploeg-rotatie: 24-uursdienst, wisselt om 07:00. 17 juni 2026 = D-ploeg.
 var PLOEG_ANKER = new Date(2026, 5, 17);   // maand 5 = juni
 var PLOEGEN = ['D', 'A', 'B', 'C'];
@@ -1224,7 +1246,15 @@ document.getElementById('cfgSave').onclick=function(){
   saveCfg();
   renderTasks();
   lastFeedId=null; firstPoll=true;
-  msg.textContent='Opgeslagen. '+caps.length+' capcode(s), '+telU+' voertuigen, '+telP+' posten.';
+  msg.textContent='Opgeslagen. '+caps.length+' capcode(s), '+telU+' voertuigen, '+telP+' posten. Taken worden gedeeld…';
+  bewaarTakenCentraal().then(function(res){
+    if(res && res.ok){
+      msg.textContent='Opgeslagen. Taken staan nu op alle schermen ('+TASKS.length+' taken).';
+    }else{
+      msg.textContent='Opgeslagen op dit apparaat. Taken delen lukte niet'+
+        ((res && res.error) ? ' ('+res.error+')' : '')+'.';
+    }
+  });
 };
 document.getElementById('cfgReset').onclick=function(){
   FILTER_CAPCODES=DEFAULT_CAPCODES.slice();

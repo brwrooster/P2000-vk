@@ -5,9 +5,37 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.pathname === "/api/melding") return meldingJSON();
+    if (url.pathname === "/api/taken") return takenAPI(request, env);
     return env.ASSETS.fetch(request);
   }
 };
+
+/* Taken centraal bewaren (KV), zodat elk scherm dezelfde lijst toont */
+async function takenAPI(request, env) {
+  const headers = {
+    "content-type": "application/json; charset=UTF-8",
+    "cache-control": "no-store",
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET,PUT,OPTIONS",
+    "access-control-allow-headers": "content-type"
+  };
+  if (request.method === "OPTIONS") return new Response(null, { headers });
+  if (!env.CONFIG) {
+    return new Response(JSON.stringify({ error: "geen opslag ingesteld" }), { headers });
+  }
+  try {
+    if (request.method === "PUT") {
+      const body = await request.text();
+      JSON.parse(body); // validatie
+      await env.CONFIG.put("taken", body);
+      return new Response(JSON.stringify({ ok: true }), { headers });
+    }
+    const opgeslagen = await env.CONFIG.get("taken");
+    return new Response(opgeslagen || JSON.stringify({ tasks: null }), { headers });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String(e) }), { headers });
+  }
+}
 
 async function meldingJSON() {
   const headers = {
