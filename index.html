@@ -906,6 +906,25 @@ function pollFeed(){
 setInterval(pollFeed, 10000);
 pollFeed();
 
+/* ===== Eigen ontvanger (Raspberry Pi, seriële poort) — heeft voorrang ===== */
+var lastPiId = null;
+var eersteP2000Poll = true;
+function pollEigenOntvanger(){
+  fetch('/api/pi',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(d){
+    if(!d || !d.text || !d.id) return;
+    if(d.id === lastPiId) return;
+    var leeftijd = d.ts ? (Date.now() - d.ts) : 0;
+    lastPiId = d.id;
+    // bij openen alleen tonen als recent; daarna elke nieuwe melding meteen
+    if(eersteP2000Poll && leeftijd > 20*60*1000){ eersteP2000Poll = false; return; }
+    eersteP2000Poll = false;
+    var p = parseP2000(d.text);
+    showAlarm(p.type, p.addr, p.prio, p.units, HOLD_MIN*60*1000, p.mid);
+  }).catch(function(){ /* eigen ontvanger niet bereikbaar: feed blijft draaien */ });
+}
+setInterval(pollEigenOntvanger, 2000);
+pollEigenOntvanger();
+
 /* ================= Geocoding (PDOK Locatieserver) ================= */
 function geocode(q, type){
   var url='https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q='+encodeURIComponent(q)+

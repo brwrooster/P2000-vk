@@ -6,9 +6,50 @@ export default {
     const url = new URL(request.url);
     if (url.pathname === "/api/melding") return meldingJSON();
     if (url.pathname === "/api/taken") return takenAPI(request, env);
+    if (url.pathname === "/api/pi") return piAPI(request, env);
     return env.ASSETS.fetch(request);
   }
 };
+
+/* Meldingen van de eigen ontvanger (Raspberry Pi via seriële poort).
+   Pi doet POST met { text, sleutel }, scherm doet GET. */
+const PI_SLEUTEL = "veluwsekant2026";   // eenvoudige beveiliging
+
+async function piAPI(request, env) {
+  const headers = {
+    "content-type": "application/json; charset=UTF-8",
+    "cache-control": "no-store",
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "GET,POST,OPTIONS",
+    "access-control-allow-headers": "content-type"
+  };
+  if (request.method === "OPTIONS") return new Response(null, { headers });
+  if (!env.CONFIG) {
+    return new Response(JSON.stringify({ error: "geen opslag ingesteld" }), { headers });
+  }
+  try {
+    if (request.method === "POST") {
+      const body = await request.json();
+      if (body.sleutel !== PI_SLEUTEL) {
+        return new Response(JSON.stringify({ error: "ongeldige sleutel" }), { status: 403, headers });
+      }
+      const melding = {
+        text: String(body.text || "").trim(),
+        ts: Date.now(),
+        id: "pi-" + Date.now()
+      };
+      if (!melding.text) {
+        return new Response(JSON.stringify({ error: "lege melding" }), { headers });
+      }
+      await env.CONFIG.put("laatste_pi_melding", JSON.stringify(melding));
+      return new Response(JSON.stringify({ ok: true, id: melding.id }), { headers });
+    }
+    const opgeslagen = await env.CONFIG.get("laatste_pi_melding");
+    return new Response(opgeslagen || JSON.stringify({ text: null }), { headers });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String(e) }), { headers });
+  }
+}
 
 /* Taken centraal bewaren (KV), zodat elk scherm dezelfde lijst toont */
 async function takenAPI(request, env) {
