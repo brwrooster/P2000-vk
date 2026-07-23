@@ -702,19 +702,29 @@ function bewaarTakenCentraal(){
 haalTakenCentraal();
 setInterval(haalTakenCentraal, 20*1000);
 
-/* Scherm 4x per dag verversen (03:00, 09:00, 15:00, 21:00) - nooit tijdens een melding */
-var HERLAAD_UREN = [3, 9, 15, 21];
-var laatsteHerlaadUur = -1;
+/* Scherm verversen op vaste momenten - nooit tijdens een melding */
+var HERLAAD_MOMENTEN = [
+  {u: 3,  m: 0},
+  {u: 9,  m: 0},
+  {u: 15, m: 0},
+  {u: 21, m: 0},
+  {u: 23, m: 35}
+];
+var laatsteHerlaad = '';
 setInterval(function(){
   var nu = new Date();
-  var uur = nu.getHours();
-  if(HERLAAD_UREN.indexOf(uur) === -1) return;
-  if(nu.getMinutes() !== 0) return;
-  if(uur === laatsteHerlaadUur) return;
-  if(document.getElementById('screen').classList.contains('is-alarm')) return; // niet tijdens alarm
-  laatsteHerlaadUur = uur;
+  var uur = nu.getHours(), min = nu.getMinutes();
+  var past = false;
+  for(var i=0;i<HERLAAD_MOMENTEN.length;i++){
+    if(HERLAAD_MOMENTEN[i].u === uur && HERLAAD_MOMENTEN[i].m === min){ past = true; break; }
+  }
+  if(!past) return;
+  var merk = uur + ':' + min;
+  if(merk === laatsteHerlaad) return;
+  if(document.getElementById('screen').className.indexOf('is-alarm') !== -1) return;
+  laatsteHerlaad = merk;
   location.reload();
-}, 30000);
+}, 20000);
 
 // Ploeg-rotatie: 24-uursdienst, wisselt om 07:00. 17 juni 2026 = D-ploeg.
 var PLOEG_ANKER = new Date(2026, 5, 17);   // maand 5 = juni
