@@ -241,14 +241,13 @@
   .route-badge.loading .v{color:#8395ad;font-weight:500}
 
   .leaflet-container{font-family:'Roboto Mono',monospace}
-  .pin{
-    width:22px;height:22px;border-radius:50% 50% 50% 0;
-    transform:rotate(-45deg);border:2px solid #0a0f1a;
-    box-shadow:0 2px 6px rgba(0,0,0,.5);
+  .kaart-merk{
+    width:34px;height:34px;display:block;
+    filter:drop-shadow(0 2px 4px rgba(0,0,0,.55));
   }
-  .pin.start{background:#3ec1ff}
-  .pin.inc-1{background:#ff3b30}
-  .pin.inc-2{background:#ffc400}
+  .kaart-merk.start{color:#1565c0}
+  .kaart-merk.inc-1{color:#ff3b30}
+  .kaart-merk.inc-2{color:#f0a500}
 
   /* ---------- Testpaneel ---------- */
   .screen-footer{
@@ -845,7 +844,7 @@ var routeBounds=null, mapObserver=null;
 function fitToRoute(){
   if(!map||!routeBounds) return;
   map.invalidateSize();
-  map.fitBounds(routeBounds,{padding:[30,30],maxZoom:14});
+  map.fitBounds(routeBounds,{padding:[18,18],maxZoom:16});
 }
 var alarmTimer = null;
 var alarmTick = null;
@@ -1168,9 +1167,19 @@ function loadRoute(dest){
 }
 
 /* ================= Kaart ================= */
-function pinIcon(cls){
-  return L.divIcon({className:'',html:'<div class="pin '+cls+'"></div>',
-    iconSize:[22,22],iconAnchor:[11,22]});
+/* Huisje voor de kazerne, ster voor het incident */
+function huisIcoon(){
+  var svg = '<svg class="kaart-merk start" viewBox="0 0 24 24" fill="currentColor" ' +
+            'stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round">' +
+            '<path d="M12 3 2.5 11h2.6v9h5.1v-5.4h3.6V20h5.1v-9h2.6z"/></svg>';
+  return L.divIcon({className:'', html:svg, iconSize:[34,34], iconAnchor:[17,30]});
+}
+function sterIcoon(prio){
+  var svg = '<svg class="kaart-merk inc-' + prio + '" viewBox="0 0 24 24" ' +
+            'fill="currentColor" stroke="#ffffff" stroke-width="1.2" stroke-linejoin="round">' +
+            '<path d="M12 1.8 15.1 8.3 22.2 9.3 17.1 14.3 18.3 21.4 12 18.0 5.7 21.4 6.9 14.3 1.8 9.3 8.9 8.3z"/>' +
+            '</svg>';
+  return L.divIcon({className:'', html:svg, iconSize:[34,34], iconAnchor:[17,17]});
 }
 function initMap(dest){
   if(!map){
@@ -1196,9 +1205,9 @@ function initMap(dest){
   }
   if(startMarker) startMarker.remove();
   if(incMarker) incMarker.remove();
-  startMarker=L.marker([startCoords.lat,startCoords.lon],{icon:pinIcon('start')})
+  startMarker=L.marker([startCoords.lat,startCoords.lon],{icon:huisIcoon()})
     .addTo(map).bindTooltip('Post Veluwsekant');
-  incMarker=L.marker([dest.lat,dest.lon],{icon:pinIcon('inc-'+selectedPrio)})
+  incMarker=L.marker([dest.lat,dest.lon],{icon:sterIcoon(selectedPrio)})
     .addTo(map);
   map.setView([dest.lat,dest.lon],13);
   setTimeout(function(){ map.invalidateSize(); },80);
