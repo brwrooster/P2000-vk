@@ -730,8 +730,9 @@ function parseUnits(str){
   var codes = (str||'').match(/\d{4,7}/g) || [];
   var out = [];
   codes.forEach(function(code){
-    if(POST_CAPCODES.indexOf(code) !== -1) return; // postcapcode, geen voertuig
     var u = UNITS[code.slice(-4)];
+    // postcapcode overslaan, maar alleen als het geen bekend voertuig is
+    if(!u && POST_CAPCODES.indexOf(code) !== -1) return;
     out.push({
       code: code,
       name: u ? u.naam : ('Eenheid ' + code),
