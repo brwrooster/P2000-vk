@@ -533,7 +533,7 @@
       <button class="btn ghost" id="cfgReset">Standaard herstellen</button>
     </div>
   </div>
-  <p class="tp-hint" id="cfgMsg">Instellingen worden alleen op dit apparaat bewaard.</p>
+  <p class="tp-hint" id="cfgMsg">Instellingen gelden voor alle schermen.</p>
 </div>
 
 <script>
@@ -657,23 +657,47 @@ function renderTasks(){
 var taskDag = -1;
 renderTasks();
 
-/* Taken centraal ophalen (zodat elk scherm dezelfde lijst toont) */
+/* Alle instellingen centraal ophalen (zodat elk scherm hetzelfde toont) */
 function haalTakenCentraal(){
   return fetch('/api/taken',{cache:'no-store'}).then(function(r){ return r.json(); })
     .then(function(d){
-      if(d && d.tasks && d.tasks.length){
+      if(!d) return false;
+      var gewijzigd = false;
+      if(d.tasks && d.tasks.length){
         TASKS = normaliseerTaken(d.tasks);
         renderTasks();
-        return true;
+        gewijzigd = true;
       }
-      return false;
+      if(d.capcodes && d.capcodes.length){
+        FILTER_CAPCODES = d.capcodes;
+        refreshPostCapcodes();
+        gewijzigd = true;
+      }
+      if(d.posts){
+        var telP = 0, k;
+        for(k in d.posts){ if(d.posts.hasOwnProperty(k)) telP++; }
+        if(telP){ POSTS = d.posts; gewijzigd = true; }
+      }
+      if(d.units){
+        var telU = 0, u;
+        for(u in d.units){ if(d.units.hasOwnProperty(u)) telU++; }
+        if(telU){ UNITS = d.units; gewijzigd = true; }
+      }
+      if(d.holdMin){ HOLD_MIN = d.holdMin; gewijzigd = true; }
+      return gewijzigd;
     }).catch(function(){ return false; });
 }
 function bewaarTakenCentraal(){
   return fetch('/api/taken',{
     method:'PUT',
     headers:{'content-type':'application/json'},
-    body: JSON.stringify({ tasks: TASKS })
+    body: JSON.stringify({
+      tasks: TASKS,
+      capcodes: FILTER_CAPCODES,
+      posts: POSTS,
+      units: UNITS,
+      holdMin: HOLD_MIN
+    })
   }).then(function(r){ return r.json(); }).catch(function(){ return { error:'niet bereikbaar' }; });
 }
 haalTakenCentraal();
@@ -1333,7 +1357,7 @@ function openCfg(){
   document.getElementById('cfgHold').value = HOLD_MIN;
   document.getElementById('cfgPosts').value = postsNaarTekst();
   document.getElementById('cfgUnits').value = unitsNaarTekst();
-  vulTaakEditor();  document.getElementById('cfgMsg').textContent = 'Instellingen worden alleen op dit apparaat bewaard.';
+  vulTaakEditor();  document.getElementById('cfgMsg').textContent = 'Instellingen gelden voor alle schermen.';
   cfgPanel.classList.add('open');
 }
 document.getElementById('cfgClose').onclick=function(){ cfgPanel.classList.remove('open'); };
@@ -1356,12 +1380,14 @@ document.getElementById('cfgSave').onclick=function(){
   saveCfg();
   renderTasks();
   lastFeedId=null; firstPoll=true;
-  msg.textContent='Opgeslagen. '+caps.length+' capcode(s), '+telU+' voertuigen, '+telP+' posten. Taken worden gedeeld…';
+  msg.textContent='Opslaan en delen…';
   bewaarTakenCentraal().then(function(res){
     if(res && res.ok){
-      msg.textContent='Opgeslagen. Taken staan nu op alle schermen ('+TASKS.length+' taken).';
+      msg.textContent='Opgeslagen. Alle schermen krijgen dit binnen 20 seconden: '+
+        caps.length+' capcode(s), '+telU+' voertuigen, '+telP+' posten, '+
+        TASKS.length+' taken, melding '+HOLD_MIN+' min.';
     }else{
-      msg.textContent='Opgeslagen op dit apparaat. Taken delen lukte niet'+
+      msg.textContent='Opgeslagen op dit apparaat. Delen lukte niet'+
         ((res && res.error) ? ' ('+res.error+')' : '')+'.';
     }
   });
