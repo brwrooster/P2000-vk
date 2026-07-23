@@ -236,7 +236,7 @@
   }
   #screen.is-alarm ~ .screen-footer{opacity:0}
   .task-bar{
-    position:fixed;left:0;right:0;bottom:5.2vh;z-index:500;
+    position:fixed;left:0;right:0;bottom:14vh;z-index:500;
     display:flex;flex-wrap:wrap;justify-content:center;
     gap:.6rem 2.2vw;padding:0 3vw;
     pointer-events:none;transition:opacity .3s;
@@ -245,7 +245,7 @@
   #screen.is-alarm ~ .task-bar{opacity:0}
   .task-bar .task{
     display:flex;align-items:center;gap:.5rem;
-    color:#8395ad;font-size:1.9vh;letter-spacing:.02em;
+    color:#8395ad;font-size:2.9vh;letter-spacing:.02em;
   }
   .task-bar .task::before{
     content:'';width:.45rem;height:.45rem;border-radius:50%;
@@ -655,6 +655,20 @@ function bewaarTakenCentraal(){
 }
 haalTakenCentraal();
 setInterval(haalTakenCentraal, 5*60*1000);
+
+/* Scherm 4x per dag verversen (03:00, 09:00, 15:00, 21:00) - nooit tijdens een melding */
+var HERLAAD_UREN = [3, 9, 15, 21];
+var laatsteHerlaadUur = -1;
+setInterval(function(){
+  var nu = new Date();
+  var uur = nu.getHours();
+  if(HERLAAD_UREN.indexOf(uur) === -1) return;
+  if(nu.getMinutes() !== 0) return;
+  if(uur === laatsteHerlaadUur) return;
+  if(document.getElementById('screen').classList.contains('is-alarm')) return; // niet tijdens alarm
+  laatsteHerlaadUur = uur;
+  location.reload();
+}, 30000);
 
 // Ploeg-rotatie: 24-uursdienst, wisselt om 07:00. 17 juni 2026 = D-ploeg.
 var PLOEG_ANKER = new Date(2026, 5, 17);   // maand 5 = juni
