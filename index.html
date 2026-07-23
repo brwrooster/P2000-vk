@@ -31,19 +31,19 @@
   body.geen-muis, body.geen-muis *{cursor:none !important}
 
   /* ===== Dagthema: licht rustscherm. Vervalt zodra er een melding is ===== */
-  body.dag #screen:not(.is-alarm){background:#f2f5f8;color:#1a2433}
-  body.dag #screen:not(.is-alarm) .topbar{background:#e8edf3;border-bottom-color:#c9d4e0}
-  body.dag #screen:not(.is-alarm) .post-id .name{color:#1a2433}
-  body.dag #screen:not(.is-alarm) .post-id .sub{color:#5a6b80}
-  body.dag #screen:not(.is-alarm) .topbar .status{color:#5a6b80}
-  body.dag #screen:not(.is-alarm) .duty{color:#0b63b8}
-  body.dag #screen:not(.is-alarm) .clock{color:#1a2433}
-  body.dag #screen:not(.is-alarm) .clock .sec{color:#0b63b8}
-  body.dag #screen:not(.is-alarm) .date{color:#5a6b80}
-  body.dag #screen:not(.is-alarm) .weather .temp{color:#1a2433}
-  body.dag #screen:not(.is-alarm) .weather .cond{color:#1a2433}
-  body.dag #screen:not(.is-alarm) .weather .wind{color:#5a6b80}
-  body.dag #screen:not(.is-alarm) .last-run{color:#5a6b80}
+  body.dag #screen{background:#f2f5f8;color:#1a2433}
+  body.dag #screen .topbar{background:#e8edf3;border-bottom-color:#c9d4e0}
+  body.dag #screen .post-id .name{color:#1a2433}
+  body.dag #screen .post-id .sub{color:#5a6b80}
+  body.dag #screen .topbar .status{color:#5a6b80}
+  body.dag #screen .duty{color:#0b63b8}
+  body.dag #screen .clock{color:#1a2433}
+  body.dag #screen .clock .sec{color:#0b63b8}
+  body.dag #screen .date{color:#5a6b80}
+  body.dag #screen .weather .temp{color:#1a2433}
+  body.dag #screen .weather .cond{color:#1a2433}
+  body.dag #screen .weather .wind{color:#5a6b80}
+  body.dag #screen .last-run{color:#5a6b80}
   body.dag .task-bar .task{color:#3c4c60}
   body.dag .task-bar .task::before{background:#0b63b8}
   body.dag .brand-credit{color:#5a6b80}
@@ -882,6 +882,9 @@ function haalZontijden(){
 }
 function isDag(){
   if(!zonOp || !zonOnder) return false;
+  // tijdens een melding altijd het donkere thema
+  var scherm = document.getElementById('screen');
+  if(scherm && scherm.className.indexOf('is-alarm') !== -1) return false;
   var nu = new Date();
   var minutenNu = nu.getHours()*60 + nu.getMinutes();
   var minOp = zonOp.getHours()*60 + zonOp.getMinutes();
@@ -1108,6 +1111,7 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
   selectedPrio=prio;
   screen.classList.remove('prio-1','prio-2');
   screen.classList.add('is-alarm','prio-'+prio);
+  if(typeof pasThemaToe === 'function') pasThemaToe();
 
   document.getElementById('prioLabel').textContent='Prioriteit '+prio;
   fitIncident(type||'Melding');
@@ -1179,6 +1183,7 @@ function clearAlarm(){
   clearInterval(alarmTick);
   var screen=document.getElementById('screen');
   screen.classList.remove('is-alarm','prio-1','prio-2');
+  if(typeof pasThemaToe === 'function') pasThemaToe();
 }
 
 /* ================= Testpaneel ================= */
