@@ -821,7 +821,7 @@ function loadUnitETAs(units, dest){
     costing: 'bus',
     units: 'kilometers'
   };
-  var vUrl = 'https://valhalla1.openstreetmap.de/sources_to_targets?json=' +
+  var vUrl = '/api/route?soort=matrix&json=' +
              encodeURIComponent(JSON.stringify(verzoek));
 
   fetch(vUrl).then(function(r){ return r.json(); }).then(function(d){
@@ -1148,7 +1148,7 @@ function loadRoute(dest){
     costing:'bus',
     directions_options:{units:'kilometers'}
   };
-  var url='https://valhalla1.openstreetmap.de/route?json='+encodeURIComponent(JSON.stringify(verzoek));
+  var url='/api/route?json='+encodeURIComponent(JSON.stringify(verzoek));
 
   fetch(url).then(function(r){ return r.json(); }).then(function(d){
     var samenvatting = d && d.trip && d.trip.summary;
@@ -1175,8 +1175,20 @@ function pinIcon(cls){
 function initMap(dest){
   if(!map){
     map=L.map('map',{zoomControl:false,attributionControl:false}).setView([dest.lat,dest.lon],13);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-      {maxZoom:19,subdomains:'abcd'}).addTo(map);
+    var kaartlaag = L.tileLayer(
+      'https://service.pdok.nl/brt/achtergrondkaart/wmts/v2_0/standaard/EPSG:3857/{z}/{x}/{y}.png',
+      { maxZoom: 19, attribution: 'Kaart: PDOK' }
+    );
+    // valt terug op de vorige kaart als PDOK niet reageert
+    kaartlaag.on('tileerror', function(){
+      if(!map._pdokTerugval){
+        map._pdokTerugval = true;
+        map.removeLayer(kaartlaag);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+          {maxZoom:19,subdomains:'abcd'}).addTo(map);
+      }
+    });
+    kaartlaag.addTo(map);
     if('ResizeObserver' in window){
       mapObserver=new ResizeObserver(function(){ fitToRoute(); });
       mapObserver.observe(document.getElementById('map'));
