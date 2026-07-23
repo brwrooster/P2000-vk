@@ -677,7 +677,7 @@ function bewaarTakenCentraal(){
   }).then(function(r){ return r.json(); }).catch(function(){ return { error:'niet bereikbaar' }; });
 }
 haalTakenCentraal();
-setInterval(haalTakenCentraal, 5*60*1000);
+setInterval(haalTakenCentraal, 20*1000);
 
 /* Scherm 4x per dag verversen (03:00, 09:00, 15:00, 21:00) - nooit tijdens een melding */
 var HERLAAD_UREN = [3, 9, 15, 21];
@@ -881,12 +881,17 @@ function haalZontijden(){
   }).catch(function(){ /* geen zontijden: blijft donker */ });
 }
 function isDag(){
-  if(!zonOp || !zonOnder) return false;
   // tijdens een melding altijd het donkere thema
   var scherm = document.getElementById('screen');
   if(scherm && scherm.className.indexOf('is-alarm') !== -1) return false;
+
   var nu = new Date();
   var minutenNu = nu.getHours()*60 + nu.getMinutes();
+
+  // zonder zontijden: terugval op vaste tijden (07:00 - 21:00)
+  if(!zonOp || !zonOnder){
+    return minutenNu >= 7*60 && minutenNu < 21*60;
+  }
   var minOp = zonOp.getHours()*60 + zonOp.getMinutes();
   var minOnder = zonOnder.getHours()*60 + zonOnder.getMinutes();
   return minutenNu >= minOp && minutenNu < minOnder;
@@ -897,6 +902,7 @@ function pasThemaToe(){
   document.body.className = klassen;
 }
 haalZontijden();
+pasThemaToe();                              // meteen toepassen (terugval-tijden)
 setInterval(haalZontijden, 6*60*60*1000);   // 4x per dag verversen
 setInterval(pasThemaToe, 60*1000);          // elke minuut controleren
 
