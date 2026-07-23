@@ -773,34 +773,69 @@ function loadUnitETAs(units, dest){
     if(units[i].post && keys.indexOf(units[i].post)===-1) keys.push(units[i].post);
   }
   if(!keys.length) return;
-  var coords = [];
-  for(i=0;i<keys.length;i++){
-    coords.push(POSTS[keys[i]].lon + ',' + POSTS[keys[i]].lat);
-  }
-  coords.push(dest.lon + ',' + dest.lat);
-  var srcIdx = [];
-  for(i=0;i<keys.length;i++) srcIdx.push(i);
-  var url = 'https://router.project-osrm.org/table/v1/driving/' + coords.join(';') +
-            '?sources=' + srcIdx.join(';') + '&destinations=' + keys.length;
-  fetch(url).then(function(r){ return r.json(); }).then(function(d){
-    if(!d.durations) throw new Error('geen tijden');
-    var perPost = {};
-    for(var k=0;k<keys.length;k++){
-      var row = d.durations[k];
-      var sec = row && row[0];
-      perPost[keys[k]] = (sec==null) ? null : Math.round(sec/60);
-    }
+
+  function toonTijden(perPost){
     units.forEach(function(u){
       var el = document.getElementById('eta-'+u.code);
       if(!el) return;
       var min = perPost[u.post];
       el.textContent = (min==null) ? 'n.b.' : (min + ' min');
     });
-  }).catch(function(){
-    units.forEach(function(u){
-      var el = document.getElementById('eta-'+u.code);
-      if(el) el.textContent = 'n.b.';
+  }
+
+  /* Terugval: OSRM (gewone auto) */
+  function viaOSRM(){
+    var coords = [];
+    for(var j=0;j<keys.length;j++){
+      coords.push(POSTS[keys[j]].lon + ',' + POSTS[keys[j]].lat);
+    }
+    coords.push(dest.lon + ',' + dest.lat);
+    var srcIdx = [];
+    for(j=0;j<keys.length;j++) srcIdx.push(j);
+    var url = 'https://router.project-osrm.org/table/v1/driving/' + coords.join(';') +
+              '?sources=' + srcIdx.join(';') + '&destinations=' + keys.length;
+    fetch(url).then(function(r){ return r.json(); }).then(function(d){
+      if(!d.durations) throw new Error('geen tijden');
+      var perPost = {};
+      for(var k=0;k<keys.length;k++){
+        var row = d.durations[k];
+        var sec = row && row[0];
+        perPost[keys[k]] = (sec==null) ? null : Math.round(sec/60);
+      }
+      toonTijden(perPost);
+    }).catch(function(){
+      var leeg = {};
+      for(var k=0;k<keys.length;k++) leeg[keys[k]] = null;
+      toonTijden(leeg);
     });
+  }
+
+  /* Valhalla-matrix met bus-profiel (busbanen meegerekend) */
+  var bronnen = [];
+  for(i=0;i<keys.length;i++){
+    bronnen.push({lat: POSTS[keys[i]].lat, lon: POSTS[keys[i]].lon});
+  }
+  var verzoek = {
+    sources: bronnen,
+    targets: [{lat: dest.lat, lon: dest.lon}],
+    costing: 'bus',
+    units: 'kilometers'
+  };
+  var vUrl = 'https://valhalla1.openstreetmap.de/sources_to_targets?json=' +
+             encodeURIComponent(JSON.stringify(verzoek));
+
+  fetch(vUrl).then(function(r){ return r.json(); }).then(function(d){
+    var matrix = d && d.sources_to_targets;
+    if(!matrix || !matrix.length) throw new Error('geen matrix');
+    var perPost = {};
+    for(var k=0;k<keys.length;k++){
+      var rij = matrix[k];
+      var cel = rij && rij[0];
+      perPost[keys[k]] = (cel && cel.time != null) ? Math.round(cel.time/60) : null;
+    }
+    toonTijden(perPost);
+  }).catch(function(){
+    viaOSRM();
   });
 }
 
@@ -1055,31 +1090,80 @@ function vindHectometer(tekst){
 // Startpunt (post) staat vast op vaste coördinaten; geen geocoding nodig.
 
 /* ================= Route (OSRM) ================= */
-function loadRoute(dest){
+/* Valhalla geeft de route als gecodeerde reeks terug; deze functie zet dat om naar punten */
+function decodeerVorm(str, precisie){
+  var index=0, lat=0, lon=0, punten=[], factor=Math.pow(10, precisie || 6);
+  while(index < str.length){
+    var b, shift=0, resultaat=0;
+    do { b=str.charCodeAt(index++)-63; resultaat |= (b & 0x1f) << shift; shift+=5; } while(b >= 0x20);
+    lat += ((resultaat & 1) ? ~(resultaat >> 1) : (resultaat >> 1));
+    shift=0; resultaat=0;
+    do { b=str.charCodeAt(index++)-63; resultaat |= (b & 0x1f) << shift; shift+=5; } while(b >= 0x20);
+    lon += ((resultaat & 1) ? ~(resultaat >> 1) : (resultaat >> 1));
+    punten.push([lat/factor, lon/factor]);
+  }
+  return punten;
+}
+
+function toonRoute(minuten, kilometers, latlngs){
   var badge=document.getElementById('routeBadge');
-  badge.classList.add('loading');
-  document.getElementById('routeTime').textContent='…';
-  document.getElementById('routeDist').textContent='…';
+  document.getElementById('routeTime').textContent=minuten+' min';
+  document.getElementById('routeDist').textContent=kilometers+' km';
+  badge.classList.remove('loading');
+  if(routeLine) routeLine.remove();
+  routeLine=L.polyline(latlngs,{color:'#1565c0',weight:5,opacity:.9}).addTo(map);
+  routeBounds=routeLine.getBounds();
+  fitToRoute();
+  setTimeout(fitToRoute,250);
+}
+
+/* Terugval: OSRM (gewone auto, dus zonder busbanen) */
+function loadRouteOSRM(dest){
   var url='https://router.project-osrm.org/route/v1/driving/'+
     startCoords.lon+','+startCoords.lat+';'+dest.lon+','+dest.lat+'?overview=full&geometries=geojson';
   fetch(url).then(function(r){ return r.json(); }).then(function(d){
     var route=d.routes && d.routes[0];
     if(!route) throw new Error('geen route');
-    var min=Math.round(route.duration/60);
-    var km=(route.distance/1000).toFixed(1);
-    document.getElementById('routeTime').textContent=min+' min';
-    document.getElementById('routeDist').textContent=km+' km';
-    badge.classList.remove('loading');
-    if(routeLine) routeLine.remove();
     var latlngs=route.geometry.coordinates.map(function(c){ return [c[1],c[0]]; });
-    routeLine=L.polyline(latlngs,{color:'#1565c0',weight:5,opacity:.9}).addTo(map);
-    routeBounds=routeLine.getBounds();
-    fitToRoute();
-    setTimeout(fitToRoute,250);
-  }).catch(function(e){
+    toonRoute(Math.round(route.duration/60), (route.distance/1000).toFixed(1), latlngs);
+  }).catch(function(){
     document.getElementById('routeTime').textContent='n.b.';
     document.getElementById('routeDist').textContent='n.b.';
-    badge.classList.remove('loading');
+    document.getElementById('routeBadge').classList.remove('loading');
+  });
+}
+
+/* Valhalla met bus-profiel: mag over busbanen, net als hulpdiensten */
+function loadRoute(dest){
+  var badge=document.getElementById('routeBadge');
+  badge.classList.add('loading');
+  document.getElementById('routeTime').textContent='…';
+  document.getElementById('routeDist').textContent='…';
+
+  var verzoek={
+    locations:[
+      {lat:startCoords.lat, lon:startCoords.lon},
+      {lat:dest.lat, lon:dest.lon}
+    ],
+    costing:'bus',
+    directions_options:{units:'kilometers'}
+  };
+  var url='https://valhalla1.openstreetmap.de/route?json='+encodeURIComponent(JSON.stringify(verzoek));
+
+  fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    var samenvatting = d && d.trip && d.trip.summary;
+    if(!samenvatting) throw new Error('geen route');
+    var latlngs=[];
+    var stukken = d.trip.legs || [];
+    for(var i=0;i<stukken.length;i++){
+      if(stukken[i].shape){
+        latlngs = latlngs.concat(decodeerVorm(stukken[i].shape, 6));
+      }
+    }
+    if(!latlngs.length) throw new Error('geen vorm');
+    toonRoute(Math.round(samenvatting.time/60), samenvatting.length.toFixed(1), latlngs);
+  }).catch(function(){
+    loadRouteOSRM(dest);   // terugval als Valhalla niet reageert
   });
 }
 
