@@ -27,6 +27,8 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
+  /* muispijl verdwijnt bij stilstand, komt terug bij beweging */
+  body.geen-muis, body.geen-muis *{cursor:none !important}
   body{
     background:#0a0f1a;
     color:#eaf1fa;
@@ -782,6 +784,18 @@ function tick(){
   if(now.getDay() !== taskDag) renderTasks();
 }
 setInterval(tick,1000); tick();
+
+/* ===== Muispijl verbergen bij stilstand ===== */
+var muisTimer = null;
+function verbergMuis(){ document.body.className += ' geen-muis'; }
+function toonMuis(){
+  document.body.className = document.body.className.replace(/\s*geen-muis/g, '');
+  clearTimeout(muisTimer);
+  muisTimer = setTimeout(verbergMuis, 1000);
+}
+document.addEventListener('mousemove', toonMuis);
+document.addEventListener('mousedown', toonMuis);
+muisTimer = setTimeout(verbergMuis, 1000);
 
 /* ================= Weer (Open-Meteo) ================= */
 var WMO = {
