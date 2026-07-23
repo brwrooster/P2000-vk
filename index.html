@@ -871,16 +871,31 @@ setInterval(pollFeed, 10000);
 pollFeed();
 
 /* ================= Geocoding (PDOK Locatieserver) ================= */
-function geocode(q){
+function geocode(q, type){
   var url='https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q='+encodeURIComponent(q)+
-    '&fl=weergavenaam,centroide_ll&rows=1';
+    '&fl=weergavenaam,centroide_ll,type&rows=5';
+  if(type) url += '&fq=type:' + encodeURIComponent(type);
   return fetch(url).then(function(r){ return r.json(); }).then(function(d){
-    var doc = d && d.response && d.response.docs && d.response.docs[0];
-    if(!doc) return null;
+    var docs = d && d.response && d.response.docs;
+    if(!docs || !docs.length) return null;
+    var doc = docs[0];
     var m=doc.centroide_ll.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/); // lon lat
     if(!m) return null;
     return { lon:parseFloat(m[1]), lat:parseFloat(m[2]), label:doc.weergavenaam };
-  });
+  }).catch(function(){ return null; });
+}
+
+/* Hectometeraanduiding herkennen, bv. "A6 102,7" of "N307 - HANZEWEG 102,7 DRONTEN" */
+function vindHectometer(tekst){
+  var t = (tekst||'').toUpperCase();
+  var weg = t.match(/\b([AN]\s?\d{1,3})\b/);
+  if(!weg) return null;
+  var hm = t.match(/\b(\d{1,3}[,.]\d)\b/);
+  if(!hm) return null;
+  return {
+    weg: weg[1].replace(/\s+/g,''),
+    hm: hm[1].replace('.', ',')
+  };
 }
 // startpunt vast opzoeken
 // Startpunt (post) staat vast op vaste coördinaten; geen geocoding nodig.
@@ -997,18 +1012,26 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint){
 
   // kandidaten opbouwen: meer context = betere straat-treffer
   var cand=[];
+  // hectometerpaal heeft voorrang (bv. "A6 102,7")
+  var hmInfo = vindHectometer((geoHint||'') + ' ' + (addr||''));
+  if(hmInfo){
+    cand.push({ q: hmInfo.weg + ' ' + hmInfo.hm, type: 'hectometerpaal' });
+    cand.push({ q: hmInfo.weg + ' ' + hmInfo.hm });
+  }
   var hw=(geoHint||'').split(' ').filter(Boolean);
-  if(hw.length>=3) cand.push(hw.slice(-3).join(' '));
-  if(hw.length>=2) cand.push(hw.slice(-2).join(' '));
-  if(addr) cand.push(addr);
+  if(hw.length>=3) cand.push({ q: hw.slice(-3).join(' ') });
+  if(hw.length>=2) cand.push({ q: hw.slice(-2).join(' ') });
+  if(addr) cand.push({ q: addr });
+  if(hmInfo) cand.push({ q: hmInfo.weg });
   var plaats=(geoHint||addr||'').split(/[,\s]+/).filter(Boolean).pop();
-  if(plaats) cand.push(plaats);
+  if(plaats) cand.push({ q: plaats });
 
   function tryGeocode(i){
     if(i>=cand.length) return Promise.resolve(null);
-    var uniq=cand[i] && cand[i].trim();
+    var c = cand[i];
+    var uniq = c && c.q && c.q.trim();
     if(!uniq) return tryGeocode(i+1);
-    return geocode(uniq).then(function(g){ return g || tryGeocode(i+1); }, function(){ return tryGeocode(i+1); });
+    return geocode(uniq, c.type).then(function(g){ return g || tryGeocode(i+1); }, function(){ return tryGeocode(i+1); });
   }
   tryGeocode(0).then(function(geo){
     if(geo){
@@ -1215,6 +1238,40 @@ document.getElementById('cfgReset').onclick=function(){
 };
 
 /* P2000-regel ontleden, bijv: "P 2 BMD-01 DIER TE WATER WINKELWEG ZEEWOLDE 254133 254152" */
+/* Meldingssoorten zoals de meldkamer ze schrijft (langste eerst herkennen) */
+var SOORTEN = [
+  // brand (BR wordt hieronder uitgeschreven naar BRAND)
+  'brand berm/bosschage','brand bijgebouw','brand container','brand afval',
+  'brand woning','brand gebouw','brand voertuig','brand schoorsteen',
+  'brand buiten','brand industrie','brand schuur','brand vaartuig','brand',
+  // water / dier
+  'dier te water','voertuig te water','persoon te water','persoon onder water',
+  'dier op hoogte','dier in problemen','dier in nood','wateroverlast','stormschade',
+  // medisch / assistentie
+  'assistentie ambulance','assistentie politie','reanimatie','beknelling',
+  // ongevallen
+  'ongeval wegvervoer','ongeval railvervoer','ongeval watervervoer',
+  'ongeval gevaarlijke stof','ongeval letsel','verkeersongeval',
+  // overig
+  'openbaar meldsysteem','automatisch alarm','brandmelding','liftopsluiting',
+  'gaslekkage','gaslucht','stankoverlast','nacontrole','hulpverlening','brandgerucht'
+];
+
+/* Afkortingen van de meldkamer uitschrijven */
+function schrijfUit(t){
+  return t
+    .replace(/\bBR\b\.?/gi, 'Brand')
+    .replace(/\bAss\.?\s*Ambu\b/gi, 'Assistentie Ambulance')
+    .replace(/\bAss\.?\s*Pol\b/gi, 'Assistentie Politie')
+    .replace(/\bgev\.?\s*stof/gi, 'gevaarlijke stof')
+    .replace(/\bOMS\b/gi, 'Openbaar Meldsysteem')
+    // meldkamer herhaalt de OMS-omschrijving soms voluit; dat is ruis
+    .replace(/Openbaar Meldsysteem\s+OPENBAAR MELDSYSTEEM(\s+BEHEERSSYSTEEM)?/gi, 'Openbaar Meldsysteem')
+    .replace(/\bBEHEERSSYSTEEM\b/gi, '')
+    .replace(/\bVKO\b/gi, 'Verkeersongeval')
+    .replace(/\bAMBU\b/gi, 'Ambulance')
+    .replace(/\s+/g,' ').trim();
+}
 function parseP2000(raw){
   var s=(raw||'').replace(/\s+/g,' ').trim();
   var pm=s.match(/\bP\s*([12])\b/i) || s.match(/\bPRIO\s*([12])\b/i);
@@ -1226,9 +1283,33 @@ function parseP2000(raw){
     .replace(/\d{6,7}/g,'')
     .replace(/\b[A-Za-z]{2,4}[-\s]?\d{1,2}\b/,'')   // meldkamer/regiocode, bv. BMD-01 / bmd-04
     .replace(/\s+/g,' ').trim();
+
+  mid = schrijfUit(mid);
+
+  // toevoeging(en) tussen haakjes horen bij de soort, niet bij het adres
+  var extras = [];
+  mid = mid.replace(/\(([^)]*)\)/g, function(m, inhoud){
+    if(inhoud && inhoud.trim()) extras.push(inhoud.trim());
+    return ' ';
+  }).replace(/\s+/g,' ').trim();
+
+  // 1) bekende soort vooraan herkennen -> rest is adres
+  var laag = mid.toLowerCase(), i, gevonden = '';
+  for(i=0;i<SOORTEN.length;i++){
+    if(laag.indexOf(SOORTEN[i]) === 0 && SOORTEN[i].length > gevonden.length) gevonden = SOORTEN[i];
+  }
+  if(gevonden){
+    var type1 = mid.slice(0, gevonden.length).trim();
+    var addr1 = mid.slice(gevonden.length).trim();
+    if(extras.length) type1 = type1 + ' (' + extras.join(', ') + ')';
+    return { prio:prio, type:type1, addr:addr1, units:caps.join(' '), mid:mid };
+  }
+
+  // 2) terugval: laatste twee woorden als adres (alleen als er genoeg woorden zijn)
   var words=mid.split(' ').filter(Boolean);
   var type=mid, addr='';
-  if(words.length>=3){ addr=words.slice(-2).join(' '); type=words.slice(0,-2).join(' '); }
+  if(words.length>=4){ addr=words.slice(-2).join(' '); type=words.slice(0,-2).join(' '); }
+  if(extras.length) type = type + ' (' + extras.join(', ') + ')';
   return { prio:prio, type:type, addr:addr, units:caps.join(' '), mid:mid };
 }
 document.getElementById('fireBtn').onclick=function(){
