@@ -827,8 +827,10 @@ function loadUnitETAs(units, dest){
     costing: 'bus',
     costing_options:{ bus:{
       use_bus_road: 1,
+      bus_road_factor: 0.3,
       private_access_penalty: 450,
-      destination_only_penalty: 300
+      destination_only_penalty: 300,
+      maneuver_penalty: 5
     }},
     units: 'kilometers'
   };
@@ -1159,8 +1161,10 @@ function loadRoute(dest){
     costing:'bus',
     costing_options:{ bus:{
       use_bus_road: 1,
+      bus_road_factor: 0.3,
       private_access_penalty: 450,
-      destination_only_penalty: 300
+      destination_only_penalty: 300,
+      maneuver_penalty: 5
     }},
     directions_options:{units:'kilometers'}
   };
