@@ -100,8 +100,8 @@
   /* ---------- IDLE ---------- */
   .idle{
     flex:1;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;
-    gap:4vh;padding:2rem;
+    align-items:center;justify-content:flex-start;
+    gap:3vh;padding:5vh 2rem 2rem;
   }
   .duty{
     font-family:'Oswald',sans-serif;font-weight:600;
@@ -142,6 +142,75 @@
     font-size:1.5vh;
   }
   .last-run:empty{display:none}
+
+  /* ---------- Statistiekenrij: laatste melding + dienst + jaar ---------- */
+  .stats-row{
+    display:flex;justify-content:center;align-items:stretch;
+    gap:0;flex-wrap:wrap;
+  }
+  .stats-row .stat{
+    padding:0 1.6rem;
+    border-left:1px solid #20304a;
+    display:flex;flex-direction:column;justify-content:center;
+    min-width:0;
+  }
+  .stats-row .stat:first-child{border-left:none;padding-left:0}
+  .stats-row .stat-label{
+    color:#5a6b80;font-family:'Roboto Mono',monospace;
+    font-size:1.15vh;letter-spacing:.1em;text-transform:uppercase;
+    margin-bottom:.15rem;
+  }
+  .stats-row .stat-value{
+    color:#8395ad;opacity:.85;
+    font-family:'Roboto Mono',monospace;letter-spacing:.03em;
+    font-size:1.6vh;white-space:nowrap;
+  }
+  .stats-row .stat-sub{
+    color:#4a5a70;font-family:'Roboto Mono',monospace;
+    font-size:1.15vh;letter-spacing:.04em;margin-top:.1rem;
+  }
+  .stats-row:empty{display:none}
+
+  .ploegen-row{
+    display:flex;justify-content:center;align-items:center;
+    gap:1.1rem;margin-top:.5rem;flex-wrap:wrap;
+  }
+  .ploegen-row .ploeg-item{
+    display:flex;align-items:baseline;gap:.35rem;
+    font-family:'Roboto Mono',monospace;font-size:1.25vh;
+    color:#5a6b80;letter-spacing:.03em;
+  }
+  .ploegen-row .ploeg-item .naam{
+    font-weight:500;color:#8395ad;
+  }
+  .ploegen-row .ploeg-item.koploper .naam{color:#ffc400}
+  .ploegen-row:empty{display:none}
+
+  .meldingen-lijst{
+    width:100%;max-width:56rem;margin-top:.6rem;
+  }
+  .meldingen-lijst .ml-kop{
+    text-align:center;color:#4a5a70;
+    font-family:'Roboto Mono',monospace;font-size:1.15vh;
+    letter-spacing:.14em;text-transform:uppercase;margin-bottom:.6rem;
+  }
+  .meldingen-lijst .ml-rij{
+    display:flex;align-items:baseline;gap:.9rem;
+    padding:.4rem 0;border-top:1px solid #182234;
+    font-family:'Roboto Mono',monospace;
+  }
+  .meldingen-lijst .ml-tijd{
+    color:#4a5a70;font-size:1.35vh;flex:0 0 auto;min-width:3.4rem;
+  }
+  .meldingen-lijst .ml-soort{
+    color:#8395ad;font-size:1.4vh;font-weight:500;flex:0 0 auto;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38%;
+  }
+  .meldingen-lijst .ml-adres{
+    color:#5a6b80;font-size:1.3vh;flex:1 1 auto;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .meldingen-lijst:empty{display:none}
 
   /* ---------- ALARM ---------- */
   .alarm{display:none;flex:1;flex-direction:column}
@@ -428,7 +497,22 @@
         <div class="wind" id="wxWind">Almere</div>
       </div>
     </div>
-    <div class="last-run" id="lastRun"></div>
+    <div class="stats-row" id="statsRow">
+      <div class="stat">
+        <div class="stat-label">Laatste melding</div>
+        <div class="stat-value" id="statLaatste">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Deze dienst</div>
+        <div class="stat-value" id="statDienst">—</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">Dit jaar</div>
+        <div class="stat-value" id="statJaar">—</div>
+      </div>
+    </div>
+    <div class="ploegen-row" id="ploegenRow"></div>
+    <div class="meldingen-lijst" id="meldingenLijst"></div>
   </section>
 
   <!-- Alarmweergave -->
@@ -698,6 +782,7 @@ function haalTakenCentraal(){
         if(telU){ UNITS = d.units; gewijzigd = true; }
       }
       if(d.holdMin){ HOLD_MIN = d.holdMin; gewijzigd = true; }
+      if(typeof renderTellingen === 'function') renderTellingen(d.tellingen || null);
       return gewijzigd;
     }).catch(function(){ return false; });
 }
@@ -1004,7 +1089,7 @@ window.addEventListener('online',function(){ setConn(true); });
 window.addEventListener('offline',function(){ setConn(false); });
 setConn(navigator.onLine);
 
-/* ================= Laatste uitruk ================= */
+/* ================= Laatste uitruk + tellingen ================= */
 function saveLastAlarm(rec){
   try{ localStorage.setItem('p2000_last', JSON.stringify(rec)); }catch(e){}
   renderLastRun();
@@ -1012,21 +1097,91 @@ function saveLastAlarm(rec){
 function renderLastRun(){
   var rec=null;
   try{ rec=JSON.parse(localStorage.getItem('p2000_last')); }catch(e){}
-  var el=document.getElementById('lastRun');
-  if(!rec||!rec.ts){ el.textContent=''; return; }
+  if(rec && rec.ts) toonLaatsteMelding(rec);
+}
+renderLastRun();
+
+/* Gedeelde weergave voor "Laatste melding": gebruikt door zowel het directe
+   (lokale) pad als het centrale pad, zodat elk apparaat na verversen altijd
+   de daadwerkelijk laatste melding toont - niet alleen wat dit ene apparaat
+   zelf heeft meegemaakt. */
+var laatstGetoondeTs = 0;
+function toonLaatsteMelding(rec){
+  if(!rec || !rec.ts) return;
+  if(rec.ts < laatstGetoondeTs) return; // nooit terug in de tijd springen
+  laatstGetoondeTs = rec.ts;
+  var el=document.getElementById('statLaatste');
   var d=new Date(rec.ts), now=new Date();
   var p=pad2;
   var sameDay=d.toDateString()===now.toDateString();
   var tijd=p(d.getHours())+':'+p(d.getMinutes());
   var wanneer=sameDay?tijd:d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'})+' '+tijd;
-  var parts=['Laatste melding'];
+  var parts=[];
   if(rec.type) parts.push(rec.type);
   if(rec.addr) parts.push(rec.addr);
-  if(rec.units && rec.units.length) parts.push(rec.units.join(', '));
   parts.push(wanneer);
   el.textContent=parts.join(' · ');
 }
-renderLastRun();
+
+/* Tellingen (dienst + jaar), komen mee met de taken-poll (zelfde 20-seconden-cyclus) */
+function renderTellingen(tellingen){
+  var dienstEl = document.getElementById('statDienst');
+  var jaarEl = document.getElementById('statJaar');
+  var ploegenEl = document.getElementById('ploegenRow');
+  if(!tellingen){
+    dienstEl.textContent='—'; jaarEl.textContent='—'; ploegenEl.innerHTML='';
+    return;
+  }
+  if(tellingen.dienst){
+    var aantal = tellingen.dienst.aantal || 0;
+    dienstEl.textContent = aantal + (aantal===1?' melding':' meldingen') + ' (' + tellingen.dienst.ploeg + '-ploeg)';
+
+    // "Laatste melding" ook centraal bepalen (niet alleen uit lokale opslag van dit apparaat)
+    if(tellingen.dienst.meldingen && tellingen.dienst.meldingen.length){
+      var nieuwste = tellingen.dienst.meldingen[tellingen.dienst.meldingen.length - 1];
+      var geparsed = parseP2000(nieuwste.text || '');
+      toonLaatsteMelding({ ts: nieuwste.ts, type: geparsed.type, addr: geparsed.addr });
+    }
+  }
+  if(tellingen.jaar){
+    var j = tellingen.jaar;
+    jaarEl.textContent = (j.totaal||0) + (j.totaal===1?' melding':' meldingen');
+
+    var lijst = ['A','B','C','D'].map(function(naam){
+      return { naam: naam, aantal: j[naam] || 0 };
+    });
+    lijst.sort(function(a,b){ return b.aantal - a.aantal; });
+    var hoogste = lijst[0].aantal;
+
+    var html = lijst.map(function(p){
+      var koploper = (p.aantal === hoogste && hoogste > 0) ? ' koploper' : '';
+      return '<span class="ploeg-item'+koploper+'"><span class="naam">'+p.naam+'-ploeg</span><span>'+p.aantal+'</span></span>';
+    }).join('');
+    ploegenEl.innerHTML = html;
+  }
+  renderMeldingenLijst(tellingen.dienst);
+}
+renderTellingen(null);
+
+/* Toont de laatste 5-8 meldingen van de huidige dienst; oudere niet zichtbaar */
+function renderMeldingenLijst(dienst){
+  var el = document.getElementById('meldingenLijst');
+  if(!dienst || !dienst.meldingen || !dienst.meldingen.length){
+    el.innerHTML=''; return;
+  }
+  var MAX_TONEN = 8;
+  var recent = dienst.meldingen.slice(-MAX_TONEN).reverse(); // nieuwste bovenaan
+  var kop = '<div class="ml-kop">Meldingen deze dienst ('+dienst.meldingen.length+')</div>';
+  var rijen = recent.map(function(m){
+    var p = parseP2000(m.text || '');
+    var d = new Date(m.ts);
+    var tijd = pad2(d.getHours())+':'+pad2(d.getMinutes());
+    return '<div class="ml-rij"><span class="ml-tijd">'+tijd+'</span>'+
+           '<span class="ml-soort">'+(p.type||'—')+'</span>'+
+           '<span class="ml-adres">'+(p.addr||'')+'</span></div>';
+  }).join('');
+  el.innerHTML = kop + rijen;
+}
 
 /* ================= Live feed (112-nu, via de Worker) ================= */
 var lastFeedId = null;
@@ -1642,7 +1797,7 @@ document.getElementById('allesBtn').onclick=function(){
   fetch('/api/pi',{
     method:'POST',
     headers:{'content-type':'application/json'},
-    body: JSON.stringify({ text: raw, sleutel: 'veluwsekant2026' })
+    body: JSON.stringify({ text: raw, sleutel: 'veluwsekant2026', test: true })
   }).then(function(r){ return r.json(); }).then(function(d){
     knop.textContent='Naar alle schermen';
     if(d && d.ok){
