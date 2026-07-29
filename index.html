@@ -1200,6 +1200,7 @@ function pollFeed(){
       if(!firstPoll || recent){
         var p = parseFeed(m);
         showAlarm(p.type, p.addr, p.prio, p.units, HOLD_MIN*60*1000, p.mid, p.kanaal);
+        meldFeedVoorTelling(p.mid, m.id);
       }
     }
     firstPoll = false;
@@ -1207,6 +1208,18 @@ function pollFeed(){
 }
 setInterval(pollFeed, 10000);
 pollFeed();
+
+/* Feed-melding (112-nu) laten meetellen bij de dienst/jaar-statistieken.
+   bronId (het unieke feed-item-id) voorkomt dat meerdere open schermen
+   dezelfde melding elk apart laten meetellen - de Worker telt 'm maar één keer. */
+function meldFeedVoorTelling(ruweTekst, bronId){
+  if(!ruweTekst || !bronId) return;
+  fetch('/api/pi',{
+    method:'POST',
+    headers:{'content-type':'application/json'},
+    body: JSON.stringify({ text: ruweTekst, sleutel: 'veluwsekant2026', bronId: 'feed-'+bronId })
+  }).catch(function(){ /* telling niet gelukt: geen probleem, scherm blijft werken */ });
+}
 
 /* ===== Eigen ontvanger (Raspberry Pi, seriële poort) — heeft voorrang ===== */
 var lastPiId = null;

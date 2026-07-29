@@ -160,10 +160,23 @@ async function piAPI(request, env) {
       if (!melding.text) {
         return new Response(JSON.stringify({ error: "lege melding" }), { headers });
       }
+
+      // Bij meldingen die via de 112-nu-feed komen (bronId meegegeven): voorkom
+      // dat meerdere open schermen dezelfde melding elk apart laten meetellen.
+      let magTellen = true;
+      if (body.bronId) {
+        const laatsteBronId = await env.CONFIG.get("laatste_feed_bron_id");
+        if (laatsteBronId === body.bronId) {
+          magTellen = false; // al geteld door een ander scherm
+        } else {
+          await env.CONFIG.put("laatste_feed_bron_id", body.bronId);
+        }
+      }
+
       await env.CONFIG.put("laatste_pi_melding", JSON.stringify(melding));
 
-      // Tellingen bijwerken, tenzij dit een oefen-/testmelding is
-      if (!body.test) {
+      // Tellingen bijwerken, tenzij dit een oefen-/testmelding is of al geteld is
+      if (!body.test && magTellen) {
         const nu = new Date();
         const bestaandeTellingen = await env.CONFIG.get("tellingen");
         const nieuweTellingen = werkTellingenBij(
