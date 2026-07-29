@@ -101,7 +101,7 @@
   .idle{
     flex:1;display:flex;flex-direction:column;
     align-items:center;justify-content:flex-start;
-    gap:3vh;padding:5vh 2rem 2rem;
+    gap:3vh;padding:11vh 2rem 2rem;
   }
   .duty{
     font-family:'Oswald',sans-serif;font-weight:600;
@@ -145,38 +145,31 @@
 
   /* ---------- Statistiekenrij: laatste melding + dienst + jaar ---------- */
   .stats-row{
-    display:flex;justify-content:center;align-items:stretch;
-    gap:0;flex-wrap:wrap;
+    display:flex;justify-content:center;align-items:flex-start;
+    gap:3.2rem;flex-wrap:wrap;
   }
   .stats-row .stat{
-    padding:0 1.6rem;
-    border-left:1px solid #20304a;
-    display:flex;flex-direction:column;justify-content:center;
-    min-width:0;
+    display:flex;flex-direction:column;align-items:center;
+    min-width:0;text-align:center;
   }
-  .stats-row .stat:first-child{border-left:none;padding-left:0}
   .stats-row .stat-label{
     color:#5a6b80;font-family:'Roboto Mono',monospace;
-    font-size:1.15vh;letter-spacing:.1em;text-transform:uppercase;
-    margin-bottom:.15rem;
+    font-size:1.1vh;letter-spacing:.12em;text-transform:uppercase;
+    margin-bottom:.3rem;
   }
   .stats-row .stat-value{
-    color:#8395ad;opacity:.85;
-    font-family:'Roboto Mono',monospace;letter-spacing:.03em;
-    font-size:1.6vh;white-space:nowrap;
-  }
-  .stats-row .stat-sub{
-    color:#4a5a70;font-family:'Roboto Mono',monospace;
-    font-size:1.15vh;letter-spacing:.04em;margin-top:.1rem;
+    color:#8395ad;
+    font-family:'Roboto Mono',monospace;letter-spacing:.02em;
+    font-size:1.7vh;white-space:nowrap;
   }
   .stats-row:empty{display:none}
 
   .ploegen-row{
     display:flex;justify-content:center;align-items:center;
-    gap:1.1rem;margin-top:.5rem;flex-wrap:wrap;
+    gap:1.6rem;margin-top:.9rem;flex-wrap:wrap;
   }
   .ploegen-row .ploeg-item{
-    display:flex;align-items:baseline;gap:.35rem;
+    display:flex;align-items:baseline;gap:.4rem;
     font-family:'Roboto Mono',monospace;font-size:1.25vh;
     color:#5a6b80;letter-spacing:.03em;
   }
@@ -186,31 +179,23 @@
   .ploegen-row .ploeg-item.koploper .naam{color:#ffc400}
   .ploegen-row:empty{display:none}
 
-  .meldingen-lijst{
-    width:100%;max-width:56rem;margin-top:.6rem;
+  .ticker-wrap{
+    width:100%;overflow:hidden;margin-top:.4rem;margin-bottom:5.5vh;
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
   }
-  .meldingen-lijst .ml-kop{
-    text-align:center;color:#4a5a70;
-    font-family:'Roboto Mono',monospace;font-size:1.15vh;
-    letter-spacing:.14em;text-transform:uppercase;margin-bottom:.6rem;
+  .ticker-wrap:empty{display:none}
+  .ticker-track{
+    display:inline-block;white-space:nowrap;
+    font-family:'Roboto Mono',monospace;font-size:1.95vh;letter-spacing:.03em;
+    color:#5a6b80;padding-left:100%;
+    animation:ticker-scroll 60s linear infinite;
   }
-  .meldingen-lijst .ml-rij{
-    display:flex;align-items:baseline;gap:.9rem;
-    padding:.4rem 0;border-top:1px solid #182234;
-    font-family:'Roboto Mono',monospace;
+  .ticker-track:empty{animation:none}
+  @keyframes ticker-scroll{
+    0%{transform:translateX(0)}
+    100%{transform:translateX(-100%)}
   }
-  .meldingen-lijst .ml-tijd{
-    color:#4a5a70;font-size:1.35vh;flex:0 0 auto;min-width:3.4rem;
-  }
-  .meldingen-lijst .ml-soort{
-    color:#8395ad;font-size:1.4vh;font-weight:500;flex:0 0 auto;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:38%;
-  }
-  .meldingen-lijst .ml-adres{
-    color:#5a6b80;font-size:1.3vh;flex:1 1 auto;
-    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  }
-  .meldingen-lijst:empty{display:none}
 
   /* ---------- ALARM ---------- */
   .alarm{display:none;flex:1;flex-direction:column}
@@ -336,7 +321,7 @@
   }
   #screen.is-alarm ~ .screen-footer{opacity:0}
   .task-bar{
-    position:fixed;left:0;right:0;bottom:14vh;z-index:500;
+    position:fixed;left:0;right:0;top:9.6vh;z-index:500;
     display:flex;flex-wrap:wrap;justify-content:center;
     gap:.6rem 2.2vw;padding:0 3vw;
     pointer-events:none;transition:opacity .3s;
@@ -512,7 +497,7 @@
       </div>
     </div>
     <div class="ploegen-row" id="ploegenRow"></div>
-    <div class="meldingen-lijst" id="meldingenLijst"></div>
+    <div class="ticker-wrap" id="tickerWrap"><div class="ticker-track" id="tickerTrack"></div></div>
   </section>
 
   <!-- Alarmweergave -->
@@ -1163,24 +1148,23 @@ function renderTellingen(tellingen){
 }
 renderTellingen(null);
 
-/* Toont de laatste 5-8 meldingen van de huidige dienst; oudere niet zichtbaar */
+/* Ticker over de volle breedte: schuift vanzelf door alle meldingen van de
+   huidige dienst, aaneengesloten. Geen interactie nodig - werkt op elke TV. */
 function renderMeldingenLijst(dienst){
-  var el = document.getElementById('meldingenLijst');
+  var track = document.getElementById('tickerTrack');
   if(!dienst || !dienst.meldingen || !dienst.meldingen.length){
-    el.innerHTML=''; return;
+    track.textContent = '';
+    return;
   }
   var MAX_TONEN = 8;
-  var recent = dienst.meldingen.slice(-MAX_TONEN).reverse(); // nieuwste bovenaan
-  var kop = '<div class="ml-kop">Meldingen deze dienst ('+dienst.meldingen.length+')</div>';
-  var rijen = recent.map(function(m){
+  var recent = dienst.meldingen.slice(-MAX_TONEN).reverse(); // nieuwste eerst
+  var tekst = recent.map(function(m){
     var p = parseP2000(m.text || '');
     var d = new Date(m.ts);
     var tijd = pad2(d.getHours())+':'+pad2(d.getMinutes());
-    return '<div class="ml-rij"><span class="ml-tijd">'+tijd+'</span>'+
-           '<span class="ml-soort">'+(p.type||'—')+'</span>'+
-           '<span class="ml-adres">'+(p.addr||'')+'</span></div>';
-  }).join('');
-  el.innerHTML = kop + rijen;
+    return tijd + ' · ' + (p.type||'—') + (p.addr ? (' · '+p.addr) : '');
+  }).join('     •     ');
+  track.textContent = tekst;
 }
 
 /* ================= Live feed (112-nu, via de Worker) ================= */
