@@ -164,9 +164,15 @@
   }
   .stats-row:empty{display:none}
 
+  .ploegen-kop{
+    text-align:center;color:#4a5a70;
+    font-family:'Roboto Mono',monospace;font-size:1.05vh;
+    letter-spacing:.14em;text-transform:uppercase;margin-top:.9rem;
+  }
+  .ploegen-kop:empty{display:none}
   .ploegen-row{
     display:flex;justify-content:center;align-items:center;
-    gap:1.6rem;margin-top:.9rem;flex-wrap:wrap;
+    gap:1.6rem;margin-top:.4rem;flex-wrap:wrap;
   }
   .ploegen-row .ploeg-item{
     display:flex;align-items:baseline;gap:.4rem;
@@ -492,10 +498,11 @@
         <div class="stat-value" id="statDienst">—</div>
       </div>
       <div class="stat">
-        <div class="stat-label">Dit jaar</div>
+        <div class="stat-label">Totaal meldingen <span id="jaarLabelStat"></span></div>
         <div class="stat-value" id="statJaar">—</div>
       </div>
     </div>
+    <div class="ploegen-kop" id="ploegenKop"></div>
     <div class="ploegen-row" id="ploegenRow"></div>
     <div class="ticker-wrap" id="tickerWrap"><div class="ticker-track" id="tickerTrack"></div></div>
   </section>
@@ -1113,8 +1120,13 @@ function renderTellingen(tellingen){
   var dienstEl = document.getElementById('statDienst');
   var jaarEl = document.getElementById('statJaar');
   var ploegenEl = document.getElementById('ploegenRow');
+  var jaarLabelStat = document.getElementById('jaarLabelStat');
+  var ploegenKop = document.getElementById('ploegenKop');
+  var huidigJaar = new Date().getFullYear();
   if(!tellingen){
     dienstEl.textContent='—'; jaarEl.textContent='—'; ploegenEl.innerHTML='';
+    jaarLabelStat.textContent = huidigJaar;
+    ploegenKop.textContent = '';
     return;
   }
   if(tellingen.dienst){
@@ -1130,6 +1142,8 @@ function renderTellingen(tellingen){
   }
   if(tellingen.jaar){
     var j = tellingen.jaar;
+    jaarLabelStat.textContent = j.jaar || huidigJaar;
+    ploegenKop.textContent = 'Totaal meldingen per ploeg ' + (j.jaar || huidigJaar);
     jaarEl.textContent = (j.totaal||0) + (j.totaal===1?' melding':' meldingen');
 
     var lijst = ['A','B','C','D'].map(function(naam){
