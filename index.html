@@ -183,7 +183,6 @@
   .ploegen-row .ploeg-item .naam{
     font-weight:500;color:#8395ad;
   }
-  .ploegen-row .ploeg-item.koploper .naam{color:#ffc400}
   .ploegen-row:empty{display:none}
 
   .ticker-wrap{
@@ -491,10 +490,6 @@
     </div>
     <div class="stats-row" id="statsRow">
       <div class="stat">
-        <div class="stat-label">Laatste melding</div>
-        <div class="stat-value" id="statLaatste">—</div>
-      </div>
-      <div class="stat">
         <div class="stat-label">Deze dienst</div>
         <div class="stat-value" id="statDienst">—</div>
       </div>
@@ -776,10 +771,6 @@ function haalTakenCentraal(){
       }
       if(d.holdMin){ HOLD_MIN = d.holdMin; gewijzigd = true; }
       if(typeof renderTellingen === 'function') renderTellingen(d.tellingen || null);
-      if(d.laatsteMelding && d.laatsteMelding.text){
-        var geparsed = parseP2000(d.laatsteMelding.text);
-        toonLaatsteMelding({ ts: d.laatsteMelding.ts, type: geparsed.type, addr: geparsed.addr });
-      }
       return gewijzigd;
     }).catch(function(){ return false; });
 }
@@ -1004,6 +995,14 @@ function windDir(deg){
   var dirs=['N','NO','O','ZO','Z','ZW','W','NW'];
   return dirs[Math.round(deg/45)%8];
 }
+/* Windsnelheid (km/u) omrekenen naar windkracht Beaufort (0-12) */
+function naarBeaufort(kmh){
+  var grenzen=[1,6,12,20,29,39,50,62,75,89,103,118];
+  for(var i=0;i<grenzen.length;i++){
+    if(kmh < grenzen[i]) return i;
+  }
+  return 12;
+}
 var windDeg = null;
 function updateWindRose(){
   var arrow=document.getElementById('windArrow');
@@ -1022,7 +1021,7 @@ function loadWeather(){
     document.getElementById('wxTemp').textContent=Math.round(c.temperature_2m)+'°';
     document.getElementById('wxCond').textContent=w[0];
     document.getElementById('wxWind').textContent=
-      'Wind '+windDir(c.wind_direction_10m)+' '+Math.round(c.wind_speed_10m)+' km/u · Almere';
+      'Wind '+windDir(c.wind_direction_10m)+' windkracht '+naarBeaufort(c.wind_speed_10m)+' · Almere';
     windDeg = c.wind_direction_10m;
     updateWindRose();
     setConn(true);
@@ -1087,39 +1086,6 @@ window.addEventListener('offline',function(){ setConn(false); });
 setConn(navigator.onLine);
 
 /* ================= Laatste uitruk + tellingen ================= */
-function saveLastAlarm(rec){
-  try{ localStorage.setItem('p2000_last', JSON.stringify(rec)); }catch(e){}
-  renderLastRun();
-}
-function renderLastRun(){
-  var rec=null;
-  try{ rec=JSON.parse(localStorage.getItem('p2000_last')); }catch(e){}
-  if(rec && rec.ts) toonLaatsteMelding(rec);
-}
-renderLastRun();
-
-/* Gedeelde weergave voor "Laatste melding": gebruikt door zowel het directe
-   (lokale) pad als het centrale pad, zodat elk apparaat na verversen altijd
-   de daadwerkelijk laatste melding toont - niet alleen wat dit ene apparaat
-   zelf heeft meegemaakt. */
-var laatstGetoondeTs = 0;
-function toonLaatsteMelding(rec){
-  if(!rec || !rec.ts) return;
-  if(rec.ts < laatstGetoondeTs) return; // nooit terug in de tijd springen
-  laatstGetoondeTs = rec.ts;
-  var el=document.getElementById('statLaatste');
-  var d=new Date(rec.ts), now=new Date();
-  var p=pad2;
-  var sameDay=d.toDateString()===now.toDateString();
-  var tijd=p(d.getHours())+':'+p(d.getMinutes());
-  var wanneer=sameDay?tijd:d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'})+' '+tijd;
-  var parts=[];
-  if(rec.type) parts.push(rec.type);
-  if(rec.addr) parts.push(rec.addr);
-  parts.push(wanneer);
-  el.textContent=parts.join(' · ');
-}
-
 /* Tellingen (dienst + jaar), komen mee met de taken-poll (zelfde 20-seconden-cyclus) */
 function renderTellingen(tellingen){
   var dienstEl = document.getElementById('statDienst');
@@ -1148,12 +1114,9 @@ function renderTellingen(tellingen){
     var lijst = ['A','B','C','D'].map(function(naam){
       return { naam: naam, aantal: j[naam] || 0 };
     });
-    lijst.sort(function(a,b){ return b.aantal - a.aantal; });
-    var hoogste = lijst[0].aantal;
 
     var html = lijst.map(function(p){
-      var koploper = (p.aantal === hoogste && hoogste > 0) ? ' koploper' : '';
-      return '<span class="ploeg-item'+koploper+'"><span class="naam">'+p.naam+'-ploeg</span><span>'+p.aantal+'</span></span>';
+      return '<span class="ploeg-item"><span class="naam">'+p.naam+'-ploeg</span><span>'+p.aantal+'</span></span>';
     }).join('');
     ploegenEl.innerHTML = html;
   }
@@ -1174,8 +1137,9 @@ function renderMeldingenLijst(dienst){
   var tekst = recent.map(function(m){
     var p = parseP2000(m.text || '');
     var d = new Date(m.ts);
+    var datum = d.toLocaleDateString('nl-NL',{day:'numeric',month:'short'});
     var tijd = pad2(d.getHours())+':'+pad2(d.getMinutes());
-    return tijd + ' · ' + (p.type||'—') + (p.addr ? (' · '+p.addr) : '');
+    return datum + ' ' + tijd + ' · ' + (p.type||'—') + (p.addr ? (' · '+p.addr) : '');
   }).join('     •     ');
   track.textContent = tekst;
 }
@@ -1254,7 +1218,7 @@ setInterval(pollEigenOntvanger, 2000);
 pollEigenOntvanger();
 
 /* ================= Geocoding (PDOK Locatieserver) ================= */
-function geocode(q, type){
+function geocode(q, type, verwacht){
   var url='https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q='+encodeURIComponent(q)+
     '&fl=weergavenaam,centroide_ll,type&rows=5';
   if(type) url += '&fq=type:' + encodeURIComponent(type);
@@ -1262,6 +1226,20 @@ function geocode(q, type){
     var docs = d && d.response && d.response.docs;
     if(!docs || !docs.length) return null;
     var doc = docs[0];
+    // Bij een hectometerpaal-zoekopdracht: alleen accepteren als de teruggegeven
+    // naam ook echt de gevraagde weg EN hectometer bevat. PDOK's vrije zoekfunctie
+    // kan anders een niet-passend resultaat teruggeven (bv. verkeerde regio).
+    if(type === 'hectometerpaal' && verwacht && verwacht.weg && verwacht.hm){
+      var wegPatroon = verwacht.weg.toUpperCase();
+      var hmPatroon = verwacht.hm.replace(',', '[,.]');
+      var hmRegex = new RegExp('\\b' + hmPatroon + '\\b');
+      var passend = docs.filter(function(d){
+        var naam = (d.weergavenaam || '').toUpperCase();
+        return naam.indexOf(wegPatroon) !== -1 && hmRegex.test(naam);
+      });
+      if(!passend.length) return null; // geen betrouwbare match: val terug op alternatief
+      doc = passend[0];
+    }
     var m=doc.centroide_ll.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/); // lon lat
     if(!m) return null;
     return { lon:parseFloat(m[1]), lat:parseFloat(m[2]), label:doc.weergavenaam };
@@ -1494,7 +1472,7 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal){
     var c = cand[i];
     var uniq = c && c.q && c.q.trim();
     if(!uniq) return tryGeocode(i+1);
-    return geocode(uniq, c.type).then(function(g){ return g || tryGeocode(i+1); }, function(){ return tryGeocode(i+1); });
+    return geocode(uniq, c.type, hmInfo).then(function(g){ return g || tryGeocode(i+1); }, function(){ return tryGeocode(i+1); });
   }
   tryGeocode(0).then(function(geo){
     if(geo){
@@ -1513,7 +1491,6 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal){
       document.getElementById('routeDist').textContent='n.b.';
       document.getElementById('routeBadge').classList.remove('loading');
     }
-    saveLastAlarm({ts:t0, type:type||'Melding', addr:lastAddr, units:unitList.map(function(u){ return u.name; })});
   });
 }
 function clearAlarm(){
