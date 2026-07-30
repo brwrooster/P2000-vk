@@ -186,7 +186,7 @@
   .ploegen-row:empty{display:none}
 
   .ticker-wrap{
-    width:100%;overflow:hidden;margin-top:.4rem;margin-bottom:5.5vh;
+    width:100%;overflow:hidden;margin-top:1.1rem;
     -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
     mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
   }
@@ -321,11 +321,11 @@
 
   /* ---------- Testpaneel ---------- */
   .screen-footer{
-    position:fixed;left:50%;bottom:.5rem;transform:translateX(-50%);
-    z-index:500;text-align:center;display:flex;flex-direction:column;gap:.3rem;
+    margin-top:auto;padding:.6rem 0 .5rem;width:100%;
+    text-align:center;display:flex;flex-direction:column;gap:.3rem;
     pointer-events:none;transition:opacity .3s;
   }
-  #screen.is-alarm ~ .screen-footer{opacity:0}
+  #screen.is-alarm .screen-footer{opacity:0}
   .task-bar{
     position:fixed;left:0;right:0;top:9.6vh;z-index:500;
     display:flex;flex-wrap:wrap;justify-content:center;
@@ -502,9 +502,9 @@
         <div class="stat-value" id="statJaar">—</div>
       </div>
     </div>
+    <div class="ticker-wrap" id="tickerWrap"><div class="ticker-track" id="tickerTrack"></div></div>
     <div class="ploegen-kop" id="ploegenKop"></div>
     <div class="ploegen-row" id="ploegenRow"></div>
-    <div class="ticker-wrap" id="tickerWrap"><div class="ticker-track" id="tickerTrack"></div></div>
   </section>
 
   <!-- Alarmweergave -->
@@ -561,14 +561,14 @@
       </aside>
     </div>
   </section>
+  <div class="screen-footer">
+    <div class="brand-credit">© 2026 RB Data Solutions. Alle rechten voorbehouden.<br><span class="mail">richardbos@icloud.com</span></div>
+    <div class="source-credit">Inhoud van <a href="https://112-nu.nl" target="_blank" rel="noopener">112-nu.nl</a></div>
+  </div>
 </div>
 
 <!-- Testknop + paneel -->
 <div class="task-bar" id="taskBar"></div>
-<div class="screen-footer">
-  <div class="brand-credit">© 2026 RB Data Solutions. Alle rechten voorbehouden.<br><span class="mail">richardbos@icloud.com</span></div>
-  <div class="source-credit">Inhoud van <a href="https://112-nu.nl" target="_blank" rel="noopener">112-nu.nl</a></div>
-</div>
 
 <div id="testPanel">
   <div class="tp-head">
