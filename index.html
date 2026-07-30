@@ -775,6 +775,10 @@ function haalTakenCentraal(){
       }
       if(d.holdMin){ HOLD_MIN = d.holdMin; gewijzigd = true; }
       if(typeof renderTellingen === 'function') renderTellingen(d.tellingen || null);
+      if(d.laatsteMelding && d.laatsteMelding.text){
+        var geparsed = parseP2000(d.laatsteMelding.text);
+        toonLaatsteMelding({ ts: d.laatsteMelding.ts, type: geparsed.type, addr: geparsed.addr });
+      }
       return gewijzigd;
     }).catch(function(){ return false; });
 }
@@ -1133,12 +1137,6 @@ function renderTellingen(tellingen){
     var aantal = tellingen.dienst.aantal || 0;
     dienstEl.textContent = aantal + (aantal===1?' melding':' meldingen') + ' (' + tellingen.dienst.ploeg + '-ploeg)';
 
-    // "Laatste melding" ook centraal bepalen (niet alleen uit lokale opslag van dit apparaat)
-    if(tellingen.dienst.meldingen && tellingen.dienst.meldingen.length){
-      var nieuwste = tellingen.dienst.meldingen[tellingen.dienst.meldingen.length - 1];
-      var geparsed = parseP2000(nieuwste.text || '');
-      toonLaatsteMelding({ ts: nieuwste.ts, type: geparsed.type, addr: geparsed.addr });
-    }
   }
   if(tellingen.jaar){
     var j = tellingen.jaar;

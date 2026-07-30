@@ -218,8 +218,10 @@ async function takenAPI(request, env) {
     }
     const opgeslagen = await env.CONFIG.get("taken");
     const tellingenRuw = await env.CONFIG.get("tellingen");
+    const laatsteMeldingRuw = await env.CONFIG.get("laatste_pi_melding");
     const data = opgeslagen ? JSON.parse(opgeslagen) : { tasks: null };
     data.tellingen = tellingenRuw ? actualiseerTellingenVoorWeergave(JSON.parse(tellingenRuw)) : null;
+    data.laatsteMelding = laatsteMeldingRuw ? JSON.parse(laatsteMeldingRuw) : null;
     return new Response(JSON.stringify(data), { headers });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { headers });
