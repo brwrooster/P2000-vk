@@ -31,6 +31,7 @@
   body.geen-muis, body.geen-muis *{cursor:none !important}
 
   /* ===== Dagthema: licht rustscherm. Vervalt zodra er een melding is ===== */
+  body.dag{background:#f2f5f8}
   body.dag #screen{background:#f2f5f8;color:#1a2433}
   body.dag #screen .topbar{background:#e8edf3;border-bottom-color:#c9d4e0}
   body.dag #screen .post-id .name{color:#1a2433}
@@ -58,7 +59,7 @@
   }
   #screen{
     position:relative;
-    width:100vw;height:100vh;
+    width:100vw;min-height:100vh;
     display:flex;flex-direction:column;
   }
 
