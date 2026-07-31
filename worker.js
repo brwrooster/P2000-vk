@@ -91,11 +91,11 @@ function actualiseerTellingenVoorWeergave(tellingen) {
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (url.pathname === "/api/melding") return meldingJSON();
     if (url.pathname === "/api/taken") return takenAPI(request, env);
-    if (url.pathname === "/api/pi") return piAPI(request, env);
+    if (url.pathname === "/api/pi") return piAPI(request, env, ctx);
     if (url.pathname === "/api/route") return routeAPI(request);
     return env.ASSETS.fetch(request);
   }
@@ -134,7 +134,7 @@ async function routeAPI(request) {
    Pi doet POST met { text, sleutel }, scherm doet GET. */
 const PI_SLEUTEL = "veluwsekant2026";   // eenvoudige beveiliging
 
-async function piAPI(request, env) {
+async function piAPI(request, env, ctx) {
   const headers = {
     "content-type": "application/json; charset=UTF-8",
     "cache-control": "no-store",
@@ -189,8 +189,24 @@ async function piAPI(request, env) {
 
       return new Response(JSON.stringify({ ok: true, id: melding.id }), { headers });
     }
+
+    // Kort (1 seconde) cachen op de rand van het netwerk: als meerdere schermen
+    // (telefoon + TV, of straks meerdere posten) bijna gelijktijdig pollen, delen
+    // ze binnen dat ene seconde-venster hetzelfde antwoord, in plaats van dat
+    // elk scherm apart de opslag bevraagt. Dit heeft geen enkele invloed op de
+    // snelheid van een alarm: de eerstvolgende poll (max. 2 seconden later) ziet
+    // een nieuwe melding gewoon meteen.
+    const cache = caches.default;
+    const cacheKey = new Request(request.url, request);
+    const gecached = await cache.match(cacheKey);
+    if (gecached) return gecached;
+
     const opgeslagen = await env.CONFIG.get("laatste_pi_melding");
-    return new Response(opgeslagen || JSON.stringify({ text: null }), { headers });
+    const antwoord = new Response(opgeslagen || JSON.stringify({ text: null }), {
+      headers: Object.assign({}, headers, { "cache-control": "public, max-age=1" })
+    });
+    if (ctx && ctx.waitUntil) ctx.waitUntil(cache.put(cacheKey, antwoord.clone()));
+    return antwoord;
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { headers });
   }
@@ -218,10 +234,8 @@ async function takenAPI(request, env) {
     }
     const opgeslagen = await env.CONFIG.get("taken");
     const tellingenRuw = await env.CONFIG.get("tellingen");
-    const laatsteMeldingRuw = await env.CONFIG.get("laatste_pi_melding");
     const data = opgeslagen ? JSON.parse(opgeslagen) : { tasks: null };
     data.tellingen = tellingenRuw ? actualiseerTellingenVoorWeergave(JSON.parse(tellingenRuw)) : null;
-    data.laatsteMelding = laatsteMeldingRuw ? JSON.parse(laatsteMeldingRuw) : null;
     return new Response(JSON.stringify(data), { headers });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { headers });
