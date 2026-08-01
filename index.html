@@ -912,14 +912,7 @@ function loadUnitETAs(units, dest){
   var verzoek = {
     sources: bronnen,
     targets: [{lat: dest.lat, lon: dest.lon}],
-    costing: 'bus',
-    costing_options:{ bus:{
-      use_bus_road: 1,
-      bus_road_factor: 0.3,
-      private_access_penalty: 450,
-      destination_only_penalty: 300,
-      maneuver_penalty: 5
-    }},
+    costing: 'auto',
     units: 'kilometers'
   };
   var vUrl = '/api/route?soort=matrix&json=' +
@@ -1317,14 +1310,7 @@ function loadRoute(dest){
       {lat:startCoords.lat, lon:startCoords.lon},
       {lat:dest.lat, lon:dest.lon}
     ],
-    costing:'bus',
-    costing_options:{ bus:{
-      use_bus_road: 1,
-      bus_road_factor: 0.3,
-      private_access_penalty: 450,
-      destination_only_penalty: 300,
-      maneuver_penalty: 5
-    }},
+    costing:'auto',
     directions_options:{units:'kilometers'}
   };
   var url='/api/route?json='+encodeURIComponent(JSON.stringify(verzoek));
