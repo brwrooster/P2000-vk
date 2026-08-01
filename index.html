@@ -1142,7 +1142,9 @@ var lastFeedId = null;
 function parseFeed(item){
   // 112-nu: de omschrijving is de volledige P2000-regel; anders de titel
   var src = (item.desc && item.desc.trim()) ? item.desc : (item.title||'');
-  return parseP2000(src);
+  var resultaat = parseP2000(src);
+  resultaat.raw = src; // de ONGESCHOONDE tekst, nodig om later correct te kunnen herparsen
+  return resultaat;
 }
 function matchtCapcode(item){
   var tekst = (item.desc || '') + ' ' + (item.title || '');
@@ -1170,7 +1172,7 @@ function pollFeed(){
       if(!firstPoll || recent){
         var p = parseFeed(m);
         showAlarm(p.type, p.addr, p.prio, p.units, HOLD_MIN*60*1000, p.mid, p.kanaal);
-        meldFeedVoorTelling(p.mid, m.id);
+        meldFeedVoorTelling(p.raw, m.id);
       }
     }
     firstPoll = false;
