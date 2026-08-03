@@ -1799,5 +1799,19 @@ document.getElementById('allesBtn').onclick=function(){
 };
 document.getElementById('clearBtn').onclick=function(){ panel.classList.remove('open'); clearAlarm(); };
 </script>
-</body>
+<script>
+function updateTaskColor() {
+  var taskBar = document.getElementById('taskBar');
+  if(!taskBar) return;
+  var hour = new Date().getHours();
+  // 6-22 uur: dag (zwart), anders: nacht (licht grijs zoals datum)
+  if(hour >= 6 && hour < 22) {
+    taskBar.style.color = '#000';
+  } else {
+    taskBar.style.color = '#aaa'; // zelfde als datum's nachts
+  }
+}
+updateTaskColor();
+setInterval(updateTaskColor, 60000);
+</script></body>
 </html>
