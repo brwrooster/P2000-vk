@@ -487,7 +487,7 @@ var PLOEG_LOGOS = {
 
   <!-- Rustweergave -->
   <section class="idle">
-    <div class="duty-logo-container" id="dutyLogoContainer"></div><div class="duty" id="dutyPloeg">—</div>
+    <div class="duty-logo-container" id="dutyLogoContainer"></div>
     <div class="clock"><span id="hm">--:--</span><span class="sec" id="ss">:--</span></div>
     <div class="date" id="dateText">—</div>
     <div class="weather" id="weatherCard">
@@ -962,7 +962,6 @@ function tick(){
   var now = new Date();
   var p = pad2;
   var ploeg = currentPloeg(now);
-  document.getElementById('dutyPloeg').textContent = ploeg + '-ploeg';
   if(PLOEG_LOGOS && PLOEG_LOGOS[ploeg]) {
     document.getElementById('dutyLogoContainer').innerHTML = '<img src="' + PLOEG_LOGOS[ploeg] + '">';
   }
