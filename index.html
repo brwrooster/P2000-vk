@@ -1119,7 +1119,7 @@ function renderTellingen(tellingen){
     });
 
     var html = lijst.map(function(p){
-      var logoUrl = '/images/ploeg-'+p.naam.toLowerCase()+'.png';
+      var logoUrl = 'https://raw.githubusercontent.com/brwrooster/P2000-vk/main/images/ploeg-'+p.naam.toLowerCase()+'.png';
       return '<span class="ploeg-item">'+
         '<div class="logo-container"><img src="'+logoUrl+'" alt="'+p.naam+'-ploeg logo"></div>'+
         '<span class="naam">'+p.naam+'-ploeg</span>'+
