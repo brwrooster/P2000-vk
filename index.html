@@ -569,8 +569,8 @@ var PLOEG_LOGOS = {
     </div>
   </section>
   <div class="screen-footer">
-    <div class="brand-credit">© 2026 RB Data Solutions. Alle rechten voorbehouden.<br>www.rbdatasolutions.nl<br><span class="mail">richardbos@icloud.com</span></div>
-    <div class="source-credit">Inhoud van <a href="https://nu.nl" target="_blank" rel="noopener">nu.nl</a></div>
+    <div class="brand-credit">© 2026 RB Data Solutions. Alle rechten voorbehouden. www.rbdatasolutions.nl<br><span class="mail">richardbos@icloud.com</span></div>
+    <div class="source-credit">Inhoud van <a href="https://-nu.nl" target="_blank" rel="noopener">-nu.nl</a></div>
   </div>
 </div>
 
@@ -655,7 +655,7 @@ var DEFAULT_POSTS = {
 };
 var DEFAULT_UNITS = {
   "4111": { naam:"Waterongevallenvoertuig Almere", post:"poort" },
-  "4naam:"Brandweerboot",                  post:"veluwsekant" },
+  "4": { naam:"Brandweerboot",                  post:"veluwsekant" },
   "4131": { naam:"Tankautospuit Poort",            post:"poort" },
   "4132": { naam:"Tankautospuit Buiten",           post:"buiten" },
   "4133": { naam:"Tankautospuit Veluwsekant",      post:"veluwsekant" },
@@ -1151,10 +1151,10 @@ function renderMeldingenLijst(dienst){
   track.textContent = tekst;
 }
 
-/* ================= Live feed (nu, via de Worker) ================= */
+/* ================= Live feed (-nu, via de Worker) ================= */
 var lastFeedId = null;
 function parseFeed(item){
-  // nu: de omschrijving is de volledige P2000-regel; anders de titel
+  // -nu: de omschrijving is de volledige P2000-regel; anders de titel
   var src = (item.desc && item.desc.trim()) ? item.desc : (item.title||'');
   var resultaat = parseP2000(src);
   resultaat.raw = src; // de ONGESCHOONDE tekst, nodig om later correct te kunnen herparsen
@@ -1195,7 +1195,7 @@ function pollFeed(){
 setInterval(pollFeed, 10000);
 pollFeed();
 
-/* Feed-melding (nu) laten meetellen bij de dienst/jaar-statistieken.
+/* Feed-melding (-nu) laten meetellen bij de dienst/jaar-statistieken.
    bronId (het unieke feed-item-id) voorkomt dat meerdere open schermen
    dezelfde melding elk apart laten meetellen - de Worker telt 'm maar één keer. */
 function meldFeedVoorTelling(ruweTekst, bronId){
