@@ -172,16 +172,26 @@
   }
   .ploegen-kop:empty{display:none}
   .ploegen-row{
-    display:flex;justify-content:center;align-items:center;
-    gap:1.6rem;margin-top:.4rem;flex-wrap:wrap;
+    display:flex;justify-content:center;align-items:flex-start;
+    gap:3rem;margin-top:.8rem;flex-wrap:wrap;
   }
   .ploegen-row .ploeg-item{
-    display:flex;align-items:baseline;gap:.4rem;
+    display:flex;flex-direction:column;align-items:center;
     font-family:'Roboto Mono',monospace;font-size:1.25vh;
     color:#5a6b80;letter-spacing:.03em;
   }
+  .ploegen-row .ploeg-item .logo-container{
+    width:120px;height:120px;margin-bottom:.8rem;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(17,26,43,0.5);border-radius:8px;
+    border:1px solid #20304a;overflow:hidden;
+  }
+  .ploegen-row .ploeg-item .logo-container img{
+    max-width:100%;max-height:100%;width:auto;height:auto;
+    object-fit:contain;
+  }
   .ploegen-row .ploeg-item .naam{
-    font-weight:500;color:#8395ad;
+    font-weight:500;color:#8395ad;margin-bottom:.3rem;
   }
   .ploegen-row:empty{display:none}
 
@@ -1109,7 +1119,12 @@ function renderTellingen(tellingen){
     });
 
     var html = lijst.map(function(p){
-      return '<span class="ploeg-item"><span class="naam">'+p.naam+'-ploeg</span><span>'+p.aantal+'</span></span>';
+      var logoUrl = '/images/ploeg-'+p.naam.toLowerCase()+'.png';
+      return '<span class="ploeg-item">'+
+        '<div class="logo-container"><img src="'+logoUrl+'" alt="'+p.naam+'-ploeg logo"></div>'+
+        '<span class="naam">'+p.naam+'-ploeg</span>'+
+        '<span>'+p.aantal+'</span>'+
+      '</span>';
     }).join('');
     ploegenEl.innerHTML = html;
   }
