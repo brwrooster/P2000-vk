@@ -109,6 +109,18 @@
     text-transform:uppercase;letter-spacing:.22em;
     color:#3ec1ff;font-size:4.5vh;
   }
+  .duty-logo-container{
+    width:180px;height:180px;
+    margin:0 auto 1.5rem auto;
+    border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    background:rgba(0,0,0,0.3);border:2px solid #3ec1ff;
+    overflow:hidden;
+  }
+  .duty-logo-container img{
+    max-width:90%;max-height:90%;
+    object-fit:contain;
+  }
   .clock{
     font-family:'Roboto Mono',monospace;font-weight:500;
     font-size:20vh;line-height:.9;
@@ -476,6 +488,7 @@
 
   <!-- Rustweergave -->
   <section class="idle">
+    <div class="duty-logo-container" id="dutyLogoContainer"></div>
     <div class="duty" id="dutyPloeg">—</div>
     <div class="clock"><span id="hm">--:--</span><span class="sec" id="ss">:--</span></div>
     <div class="date" id="dateText">—</div>
@@ -950,7 +963,15 @@ function pad2(n){ n = String(n); return n.length < 2 ? '0' + n : n; }
 function tick(){
   var now = new Date();
   var p = pad2;
-  document.getElementById('dutyPloeg').textContent = currentPloeg(now) + '-ploeg';
+  var ploeg = currentPloeg(now);
+  document.getElementById('dutyPloeg').textContent = ploeg + '-ploeg';
+  
+  // Logo voor huidige ploeg tonen (uit GitHub image/ folder)
+  var logoContainer = document.getElementById('dutyLogoContainer');
+  var logoUrl = 'https://raw.githubusercontent.com/brwrooster/P2000-vk/main/image/ploeg_transparent_ploeg-'+ploeg.toLowerCase();
+  if(ploeg === 'D') logoUrl += '.PNG'; else logoUrl += '.png';
+  logoContainer.innerHTML = '<img src="'+logoUrl+'" alt="'+ploeg+'-ploeg logo">';
+  
   document.getElementById('hm').textContent = p(now.getHours())+':'+p(now.getMinutes());
   document.getElementById('ss').textContent = ':'+p(now.getSeconds());
   document.getElementById('dateText').textContent =
