@@ -44,7 +44,7 @@
   body.dag #screen .weather .temp{color:#1a2433}
   body.dag #screen .weather .cond{color:#1a2433}
   body.dag #screen .weather .wind{color:#5a6b80}
-  body.dag #screen .last-run{color:#5a6b80}
+  body.dag #screen 
   body.dag .task-bar .task{color:#3c4c60}
   body.dag .task-bar .task::before{background:#0b63b8}
   body.dag .brand-credit{color:#5a6b80}
@@ -133,11 +133,7 @@
     font-family:'Roboto Mono',monospace;letter-spacing:.02em;
   }
   .weather .sep{display:none}
-  .last-run{
-    color:#8395ad;opacity:.7;
-    font-family:'Roboto Mono',monospace;letter-spacing:.04em;
-    font-size:1.5vh;
-  }
+  
   .last-run:empty{display:none}
 
   /* ---------- Statistiekenrij: laatste melding + dienst + jaar ---------- */
@@ -446,7 +442,21 @@
   @media(prefers-reduced-motion:reduce){
     *{transition:none!important}
   }
-.duty{font-size:2rem;font-weight:bold;color:#0b63b8;text-align:center;}</style>
+.duty{font-size:2rem;font-weight:bold;color:#0b63b8;text-align:center;}
+
+
+.last-run{
+  max-height:25vh;
+  overflow:hidden;
+  font-size:0.7rem;
+  line-height:1;
+  padding:0.1rem;
+}
+.last-run > *{
+  margin:0.05rem 0;
+  padding:0.05rem;
+}
+</style>
 </head>
 <body>
 
@@ -1784,5 +1794,26 @@ document.getElementById('allesBtn').onclick=function(){
 };
 document.getElementById('clearBtn').onclick=function(){ panel.classList.remove('open'); clearAlarm(); };
 </script>
-</body>
+<script>
+function fitMeldingText() {
+  var lastRun = document.querySelector('.last-run');
+  if(!lastRun) return;
+  
+  var maxHeight = 0.25 * window.innerHeight; // 25vh
+  lastRun.style.fontSize = '0.7rem';
+  
+  // Check if text overflows
+  if(lastRun.scrollHeight > maxHeight) {
+    var fontSize = 0.7;
+    while(lastRun.scrollHeight > maxHeight && fontSize > 0.4) {
+      fontSize -= 0.05;
+      lastRun.style.fontSize = fontSize + 'rem';
+    }
+  }
+}
+
+// Run on load and when content changes
+fitMeldingText();
+setInterval(fitMeldingText, 2000);
+</script></body>
 </html>
