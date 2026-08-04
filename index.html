@@ -451,12 +451,14 @@
   padding:0.05rem;
 }
 
+
+
 .last-run{
-  max-height:35vh;
+  max-height:40vh;
   overflow:hidden;
-  font-size:0.7rem;
-  line-height:1.1;
-  padding:0.1rem;
+  font-size:0.65rem;
+  line-height:1;
+  padding:0.05rem;
 }
 </style>
 </head>
@@ -1842,5 +1844,65 @@ setInterval(fitMeldingText, 1000);
 
 // Also run when page loads
 window.addEventListener('load', fitMeldingText);
+</script><script>
+function fitMeldingText() {
+  var lastRun = document.querySelector('.last-run');
+  if(!lastRun || !lastRun.innerHTML.trim()) return;
+  
+  // Kleinere max-height op tablet (> 800px)
+  var screenWidth = window.innerWidth;
+  var maxHeight;
+  if(screenWidth > 800) {
+    maxHeight = 0.25 * window.innerHeight; // Tablet: 25vh
+  } else {
+    maxHeight = 0.35 * window.innerHeight; // iPhone: 35vh
+  }
+  
+  var fontSize = 0.7;
+  lastRun.style.fontSize = fontSize + 'rem';
+  
+  // Agressief krimpen als nodig
+  var attempts = 0;
+  while(lastRun.scrollHeight > maxHeight && fontSize > 0.3 && attempts < 15) {
+    fontSize -= 0.05;
+    lastRun.style.fontSize = fontSize + 'rem';
+    attempts++;
+  }
+}
+
+fitMeldingText();
+setInterval(fitMeldingText, 500); // Sneller checken
+window.addEventListener('load', fitMeldingText);
+window.addEventListener('resize', fitMeldingText);
+</script><script>
+function fitMeldingText() {
+  var lastRun = document.querySelector('.last-run');
+  if(!lastRun || !lastRun.innerHTML.trim()) return;
+  
+  var screenWidth = window.innerWidth;
+  var maxHeight;
+  if(screenWidth > 800) {
+    maxHeight = 0.4 * window.innerHeight; // Tablet: 40vh
+  } else {
+    maxHeight = 0.45 * window.innerHeight; // iPhone: 45vh
+  }
+  
+  var fontSize = 0.65;
+  lastRun.style.fontSize = fontSize + 'rem';
+  lastRun.style.lineHeight = '1';
+  
+  // Veel agressiever krimpen
+  var attempts = 0;
+  while(lastRun.scrollHeight > maxHeight && fontSize > 0.25 && attempts < 20) {
+    fontSize -= 0.03;
+    lastRun.style.fontSize = fontSize + 'rem';
+    attempts++;
+  }
+}
+
+fitMeldingText();
+setInterval(fitMeldingText, 500);
+window.addEventListener('load', fitMeldingText);
+window.addEventListener('resize', fitMeldingText);
 </script></body>
 </html>
