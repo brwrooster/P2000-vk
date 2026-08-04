@@ -445,16 +445,18 @@
 .duty{font-size:2rem;font-weight:bold;color:#0b63b8;text-align:center;}
 
 
-.last-run{
-  max-height:25vh;
-  overflow:hidden;
-  font-size:0.7rem;
-  line-height:1;
-  padding:0.1rem;
-}
+
 .last-run > *{
   margin:0.05rem 0;
   padding:0.05rem;
+}
+
+.last-run{
+  max-height:35vh;
+  overflow:hidden;
+  font-size:0.7rem;
+  line-height:1.1;
+  padding:0.1rem;
 }
 </style>
 </head>
@@ -1815,5 +1817,30 @@ function fitMeldingText() {
 // Run on load and when content changes
 fitMeldingText();
 setInterval(fitMeldingText, 2000);
+</script><script>
+function fitMeldingText() {
+  var lastRun = document.querySelector('.last-run');
+  if(!lastRun || !lastRun.innerHTML.trim()) return;
+  
+  var maxHeight = 0.35 * window.innerHeight; // 35vh
+  var fontSize = 0.7;
+  
+  lastRun.style.fontSize = fontSize + 'rem';
+  
+  // Shrink if needed
+  var attempts = 0;
+  while(lastRun.scrollHeight > maxHeight && fontSize > 0.35 && attempts < 10) {
+    fontSize -= 0.05;
+    lastRun.style.fontSize = fontSize + 'rem';
+    attempts++;
+  }
+}
+
+// Run immediately and on interval
+fitMeldingText();
+setInterval(fitMeldingText, 1000);
+
+// Also run when page loads
+window.addEventListener('load', fitMeldingText);
 </script></body>
 </html>
