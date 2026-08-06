@@ -1689,22 +1689,36 @@ document.getElementById('cfgReset').onclick=function(){
 /* P2000-regel ontleden, bijv: "P 2 BMD-01 DIER TE WATER WINKELWEG ZEEWOLDE 254133 254152" */
 /* Meldingssoorten zoals de meldkamer ze schrijft (langste eerst herkennen) */
 var SOORTEN = [
-  // brand (BR wordt hieronder uitgeschreven naar BRAND)
+  // brand - uitgebreid
+  'brand riet','brand bos','brand natuur','brand struiken','brand graslanden',
   'brand berm/bosschage','brand bijgebouw','brand container','brand afval',
   'brand woning','brand gebouw','brand voertuig','brand schoorsteen',
   'brand buiten','brand industrie','brand schuur','brand vaartuig','brand',
+  'brand flatwoning','brand appartement','brand kantoor','brand winkel','brand berging',
+  'brand hooizolder','brand hooi','brand materiaal','brand elektra','brand oven',
+  
   // water / dier
   'dier te water','voertuig te water','persoon te water','persoon onder water',
   'dier op hoogte','dier in problemen','dier in nood','wateroverlast','stormschade',
+  'dier bekneld','dier gewond','vogel in nood','insect plaag','dier slachthuis',
+  
   // medisch / assistentie
   'assistentie ambulance','assistentie politie','reanimatie','beknelling',
+  'verkeersongeval','ongeval','valletje','scheur','snijwond','verbranding',
+  'elektrocutie','gaslekkage gaslucht','allergische reactie','bewusteloos',
+  
   // ongevallen
   'ongeval wegvervoer','ongeval railvervoer','ongeval watervervoer',
   'ongeval gevaarlijke stof','ongeval letsel','verkeersongeval',
+  'aanrijding','botsing','spoorwegongeval','scheepsongeval',
+  
   // overig
   'openbaar meldsysteem','automatisch alarm','brandmelding','liftopsluiting',
-  'gaslekkage','gaslucht','stankoverlast','nacontrole','hulpverlening','brandgerucht'
+  'gaslekkage','gaslucht','stankoverlast','nacontrole','hulpverlening',
+  'brandgerucht','luchtafvoer','rook overlast','zwelbranden','koolmonoxide',
+  'CO melder','gasmelder','melding onderzoeken','foutmeldingen','verkeerscontrole'
 ];
+
 
 /* Afkortingen van de meldkamer uitschrijven */
 function schrijfUit(t){
