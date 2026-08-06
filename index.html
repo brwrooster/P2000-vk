@@ -1690,7 +1690,7 @@ document.getElementById('cfgReset').onclick=function(){
 /* Meldingssoorten zoals de meldkamer ze schrijft (langste eerst herkennen) */
 var SOORTEN = [
   // brand - uitgebreid
-  'brand riet','brand bos','brand natuur','brand struiken','brand graslanden',
+  'brand - riet','brand riet','brand - bos','brand bos','brand natuur','brand struiken','brand graslanden',
   'brand berm/bosschage','brand bijgebouw','brand container','brand afval',
   'brand woning','brand gebouw','brand voertuig','brand schoorsteen',
   'brand buiten','brand industrie','brand schuur','brand vaartuig','brand',
@@ -1723,7 +1723,7 @@ var SOORTEN = [
 /* Afkortingen van de meldkamer uitschrijven */
 function schrijfUit(t){
   return t
-    .replace(/\bBR\b\.?/gi, 'Brand').replace(/\briet\b/gi, '- Riet')
+    .replace(/\bBR\b\.?/gi, 'Brand').replace(/\briet\b/gi, '- riet')
     .replace(/\bAss\.?\s*Ambu\b/gi, 'Assistentie Ambulance')
     .replace(/\bAss\.?\s*Pol\b/gi, 'Assistentie Politie')
     .replace(/\bgev\.?\s*stof/gi, 'gevaarlijke stof')
