@@ -1709,7 +1709,7 @@ var SOORTEN = [
 /* Afkortingen van de meldkamer uitschrijven */
 function schrijfUit(t){
   return t
-    .replace(/\bBR\b\.?/gi, 'Brand')
+    .replace(/\bBR\b\.?/gi, 'Brand').replace(/\briet\b/gi, '- Riet')
     .replace(/\bAss\.?\s*Ambu\b/gi, 'Assistentie Ambulance')
     .replace(/\bAss\.?\s*Pol\b/gi, 'Assistentie Politie')
     .replace(/\bgev\.?\s*stof/gi, 'gevaarlijke stof')
