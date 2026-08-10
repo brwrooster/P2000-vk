@@ -1473,7 +1473,7 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal){
   // Als de locatie bekend is, toon die meteen
   if(knownGeo){
     document.getElementById('incidentStreet').textContent=knownGeo.label;
-    document.getElementById('incidentPlace').textContent='(Bekende locatie)';
+    document.getElementById('incidentPlace').textContent='Almere';
     lastAddr=knownGeo.label;
     initMap({lat:knownGeo.lat,lon:knownGeo.lon});
     loadRoute({lat:knownGeo.lat,lon:knownGeo.lon});
