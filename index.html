@@ -1449,47 +1449,72 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal){
   document.getElementById('incidentStreet').textContent=addr;
   document.getElementById('incidentPlace').textContent='Locatie opzoeken…';
 
-  // kandidaten opbouwen: meer context = betere straat-treffer
-  var cand=[];
-  // hectometerpaal heeft voorrang (bv. "A6 102,7")
-  var hmInfo = vindHectometer((geoHint||'') + ' ' + (addr||''));
-  if(hmInfo){
-    cand.push({ q: hmInfo.weg + ' ' + hmInfo.hm, type: 'hectometerpaal' });
-    cand.push({ q: hmInfo.weg + ' ' + hmInfo.hm });
-  }
-  var hw=(geoHint||'').split(' ').filter(Boolean);
-  if(hw.length>=3) cand.push({ q: hw.slice(-3).join(' ') });
-  if(hw.length>=2) cand.push({ q: hw.slice(-2).join(' ') });
-  if(addr) cand.push({ q: addr });
-  if(hmInfo) cand.push({ q: hmInfo.weg });
-  var plaats=(geoHint||addr||'').split(/[,\s]+/).filter(Boolean).pop();
-  if(plaats) cand.push({ q: plaats });
-
-  function tryGeocode(i){
-    if(i>=cand.length) return Promise.resolve(null);
-    var c = cand[i];
-    var uniq = c && c.q && c.q.trim();
-    if(!uniq) return tryGeocode(i+1);
-    return geocode(uniq, c.type, hmInfo).then(function(g){ return g || tryGeocode(i+1); }, function(){ return tryGeocode(i+1); });
-  }
-  tryGeocode(0).then(function(geo){
-    if(geo){
-      // label opsplitsen in straat / plaats waar mogelijk
-      var street=geo.label.split(',')[0];
-      var place=geo.label.split(',').slice(1).join(',').trim()||'Almere';
-      document.getElementById('incidentStreet').textContent=street;
-      document.getElementById('incidentPlace').textContent=place;
-      lastAddr=street+', '+place;
-      initMap({lat:geo.lat,lon:geo.lon});
-      loadRoute({lat:geo.lat,lon:geo.lon});
-      loadUnitETAs(unitList,{lat:geo.lat,lon:geo.lon});
-    }else{
-      document.getElementById('incidentPlace').textContent='Locatie niet gevonden';
-      document.getElementById('routeTime').textContent='n.b.';
-      document.getElementById('routeDist').textContent='n.b.';
-      document.getElementById('routeBadge').classList.remove('loading');
+  // EERSTE: Controleer of het adres een bekende locatie uit LOCATIES_CONFIG is
+  var knownGeo = null;
+  if(addr && LOCATIES_CONFIG && LOCATIES_CONFIG.length > 0){
+    var addrLower = addr.toLowerCase();
+    for(var ki=0; ki<LOCATIES_CONFIG.length; ki++){
+      var loc = LOCATIES_CONFIG[ki];
+      if(addrLower.indexOf(loc.naam) !== -1){
+        // Gevonden! Gebruik de vooraf gedefinieerde coördinaten
+        knownGeo = { lat: loc.coord[0], lon: loc.coord[1], label: loc.naam.toUpperCase() };
+        break;
+      }
     }
-  });
+  }
+  
+  // Als de locatie bekend is, toon die meteen
+  if(knownGeo){
+    document.getElementById('incidentStreet').textContent=knownGeo.label;
+    document.getElementById('incidentPlace').textContent='(Bekende locatie)';
+    lastAddr=knownGeo.label;
+    initMap({lat:knownGeo.lat,lon:knownGeo.lon});
+    loadRoute({lat:knownGeo.lat,lon:knownGeo.lon});
+    loadUnitETAs(unitList,{lat:knownGeo.lat,lon:knownGeo.lon});
+  }else{
+    // ANDERS: Standaard geocoding via PDOK
+    // kandidaten opbouwen: meer context = betere straat-treffer
+    var cand=[];
+    // hectometerpaal heeft voorrang (bv. "A6 102,7")
+    var hmInfo = vindHectometer((geoHint||'') + ' ' + (addr||''));
+    if(hmInfo){
+      cand.push({ q: hmInfo.weg + ' ' + hmInfo.hm, type: 'hectometerpaal' });
+      cand.push({ q: hmInfo.weg + ' ' + hmInfo.hm });
+    }
+    var hw=(geoHint||'').split(' ').filter(Boolean);
+    if(hw.length>=3) cand.push({ q: hw.slice(-3).join(' ') });
+    if(hw.length>=2) cand.push({ q: hw.slice(-2).join(' ') });
+    if(addr) cand.push({ q: addr });
+    if(hmInfo) cand.push({ q: hmInfo.weg });
+    var plaats=(geoHint||addr||'').split(/[,\s]+/).filter(Boolean).pop();
+    if(plaats) cand.push({ q: plaats });
+
+    function tryGeocode(i){
+      if(i>=cand.length) return Promise.resolve(null);
+      var c = cand[i];
+      var uniq = c && c.q && c.q.trim();
+      if(!uniq) return tryGeocode(i+1);
+      return geocode(uniq, c.type, hmInfo).then(function(g){ return g || tryGeocode(i+1); }, function(){ return tryGeocode(i+1); });
+    }
+    tryGeocode(0).then(function(geo){
+      if(geo){
+        // label opsplitsen in straat / plaats waar mogelijk
+        var street=geo.label.split(',')[0];
+        var place=geo.label.split(',').slice(1).join(',').trim()||'Almere';
+        document.getElementById('incidentStreet').textContent=street;
+        document.getElementById('incidentPlace').textContent=place;
+        lastAddr=street+', '+place;
+        initMap({lat:geo.lat,lon:geo.lon});
+        loadRoute({lat:geo.lat,lon:geo.lon});
+        loadUnitETAs(unitList,{lat:geo.lat,lon:geo.lon});
+      }else{
+        document.getElementById('incidentPlace').textContent='Locatie niet gevonden';
+        document.getElementById('routeTime').textContent='n.b.';
+        document.getElementById('routeDist').textContent='n.b.';
+        document.getElementById('routeBadge').classList.remove('loading');
+      }
+    });
+  }
 }
 function clearAlarm(){
   clearTimeout(alarmTimer);
@@ -1719,6 +1744,17 @@ var SOORTEN = [
   'CO melder','gasmelder','melding onderzoeken','foutmeldingen','verkeerscontrole'
 ];
 
+/* Kazerne-specifieke locatienamen (plaats, water, buurten, etc.)
+   Deze worden gematcht vóór Nominatim-geocoding, dus hier kun je 
+   aliassen definiëren die de meldkamer soms verkeerd schrijft. */
+var LOCATIES_CONFIG = [
+  { naam: 'weerwater', coord: [52.3707, 5.2617], type: 'water' },  // Weerwater, Almere
+  { naam: 'voor', coord: [52.3688, 5.2642], type: 'wijk' },        // Voor, Almere
+  { naam: 'poort', coord: [52.3706, 5.2723], type: 'wijk' },       // Poort, Almere
+  { naam: 'oost', coord: [52.3750, 5.2750], type: 'wijk' },        // Oost, Almere
+  { naam: 'west', coord: [52.3700, 5.2550], type: 'wijk' },        // West, Almere
+  { naam: 'strand', coord: [52.3650, 5.2700], type: 'locatie' },   // Strand Almere
+];
 
 /* Afkortingen van de meldkamer uitschrijven */
 function schrijfUit(t){
@@ -1776,6 +1812,20 @@ function parseP2000(raw){
   var type=mid, addr='';
   if(words.length>=4){ addr=words.slice(-2).join(' '); type=words.slice(0,-2).join(' '); }
   if(extras.length) type = type + ' (' + extras.join(', ') + ')';
+  
+  // 3) Controleer of addr een lokale locatienaam bevat (LOCATIES_CONFIG)
+  if(addr && LOCATIES_CONFIG && LOCATIES_CONFIG.length > 0){
+    var addrLower = addr.toLowerCase();
+    for(var li=0; li<LOCATIES_CONFIG.length; li++){
+      if(addrLower.indexOf(LOCATIES_CONFIG[li].naam) !== -1){
+        // Gevonden! Voeg de configlocatie toe aan addr
+        // (zodat bij geocoding de coördinaten direct gebruikt kunnen worden)
+        addr = LOCATIES_CONFIG[li].naam.toUpperCase() + ' ' + addr;
+        break;
+      }
+    }
+  }
+  
   return { prio:prio, type:type, addr:addr, units:caps.join(' '), mid:mid, kanaal:kanaal };
 }
 document.getElementById('fireBtn').onclick=function(){
