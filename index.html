@@ -1224,13 +1224,36 @@ pollEigenOntvanger();
 
 /* ================= Geocoding (PDOK Locatieserver) ================= */
 function geocode(q, type, verwacht){
+  // Bias naar Almere: centraal Almere is 52.37, 5.26
+  // Gebruik de fq parameter om resultaten dichter bij Almere te prioritiseren
   var url='https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q='+encodeURIComponent(q)+
-    '&fl=weergavenaam,centroide_ll,type&rows=5';
-  if(type) url += '&fq=type:' + encodeURIComponent(type);
+    '&fl=weergavenaam,centroide_ll,type&rows=10';  // rows=10 voor meer opties
+  
+  // Voeg Almere als extra zoekterm toe om prioritering te verbeteren
+  if(type) {
+    url += '&fq=type:' + encodeURIComponent(type);
+  }
+  // Bias: voeg "Almere" toe aan query als het adres uit onze regio is
+  if(q.toLowerCase().indexOf('almere') === -1 && q.toLowerCase().indexOf('kerkdriel') === -1){
+    url += '&fq=plaats:Almere';  // Dwing PDOK naar Almere
+  }
+  
   return fetch(url).then(function(r){ return r.json(); }).then(function(d){
     var docs = d && d.response && d.response.docs;
     if(!docs || !docs.length) return null;
-    var doc = docs[0];
+    
+    // Filter: als de zoekterm geen plaats bevat, geef voorkeur aan Almere resultaten
+    var filtered = docs;
+    if(q.toLowerCase().indexOf('almere') === -1 && q.toLowerCase().indexOf('kerkdriel') === -1){
+      var almereMatches = docs.filter(function(doc){
+        return (doc.weergavenaam || '').toLowerCase().indexOf('almere') !== -1;
+      });
+      if(almereMatches.length > 0){
+        filtered = almereMatches;  // Gebruik alleen Almere resultaten
+      }
+    }
+    
+    var doc = filtered[0];
     // Bij een hectometerpaal-zoekopdracht: alleen accepteren als de teruggegeven
     // naam ook echt de gevraagde weg EN hectometer bevat. PDOK's vrije zoekfunctie
     // kan anders een niet-passend resultaat teruggeven (bv. verkeerde regio).
