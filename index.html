@@ -817,6 +817,12 @@ function haalTakenCentraal(){
       if(d.tellingen){
         renderTellingen(d.tellingen);
       }
+      // ThemeMode laden en toepassen
+      if(d.themeMode && d.themeMode !== THEME_MODE){
+        THEME_MODE = d.themeMode;
+        pasThemaToe();
+        gewijzigd = true;
+      }
       return gewijzigd;
     }).catch(function(){ return false; });
 }
