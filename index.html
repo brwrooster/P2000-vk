@@ -1791,16 +1791,14 @@ document.getElementById('cfgSave').onclick=function(){
   saveCfg();
   renderTasks();
   lastFeedId=null; firstPoll=true;
-  msg.textContent='Opslaan en delen…';
+  msg.textContent='Opslaan…';
+  saveCfg();  // Eerst lokaal opslaan
+  pasThemaToe();
   bewaarTakenCentraal().then(function(res){
-    if(res && res.ok){
-      msg.textContent='Opgeslagen. Alle schermen krijgen dit binnen 20 seconden: '+
-        caps.length+' capcode(s), '+telU+' voertuigen, '+telP+' posten, '+
-        TASKS.length+' taken, melding '+HOLD_MIN+' min, thema '+THEME_MODE+'.';
-    }else{
-      msg.textContent='Opgeslagen op dit apparaat. Delen lukte niet'+
-        ((res && res.error) ? ' ('+res.error+')' : '')+'.';
-    }
+    msg.textContent='Opgeslagen! Thema: '+THEME_MODE;
+  }).catch(function(e){
+    msg.textContent='Opgeslagen lokaal (server niet bereikt)';
+    console.error('bewaarTakenCentraal error:', e);
   });
 };
 document.getElementById('cfgReset').onclick=function(){
