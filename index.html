@@ -1491,7 +1491,23 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal){
     var hw=(geoHint||'').split(' ').filter(Boolean);
     if(hw.length>=3) cand.push({ q: hw.slice(-3).join(' ') });
     if(hw.length>=2) cand.push({ q: hw.slice(-2).join(' ') });
-    if(addr) cand.push({ q: addr });
+    
+    // Verbeterd adres-format voor PDOK: plaats scheiden met komma
+    if(addr){
+      var addrTokens = addr.split(/\s+/);
+      if(addrTokens.length >= 2){
+        var lastWord = addrTokens[addrTokens.length - 1];
+        // Herken veel voorkomende plaatsnamen
+        var bekendePlaatsen = ['almere', 'amsterdam', 'rotterdam', 'den haag', 'utrecht'];
+        if(bekendePlaatsen.indexOf(lastWord.toLowerCase()) !== -1){
+          // Plaats afscheiden met komma voor betere PDOK geocoding
+          var formattedAddr = addrTokens.slice(0, -1).join(' ') + ', ' + lastWord;
+          cand.push({ q: formattedAddr });
+        }
+      }
+      cand.push({ q: addr });  // Fallback: origineel adres
+    }
+    
     if(hmInfo) cand.push({ q: hmInfo.weg });
     var plaats=(geoHint||addr||'').split(/[,\s]+/).filter(Boolean).pop();
     if(plaats) cand.push({ q: plaats });
