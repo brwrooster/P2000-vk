@@ -1224,54 +1224,58 @@ pollEigenOntvanger();
 
 /* ================= Geocoding (PDOK Locatieserver) ================= */
 function geocode(q, type, verwacht){
-  // Bias naar Almere: centraal Almere is 52.37, 5.26
-  // Gebruik de fq parameter om resultaten dichter bij Almere te prioritiseren
-  var url='https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q='+encodeURIComponent(q)+
-    '&fl=weergavenaam,centroide_ll,type&rows=10';  // rows=10 voor meer opties
+  // HARDCODED: Griendenbrug Almere - omdat Nominatim dit soms in Kerkdriel plaats
+  if(q && q.toLowerCase().indexOf('griendenbrug') !== -1){
+    if(q.toLowerCase().indexOf('kerkdriel') === -1){  // Tenzij expliciet Kerkdriel genoemd
+      return Promise.resolve({ 
+        lat: 52.3669, 
+        lon: 5.2894, 
+        label: 'Griendenbrug, Almere' 
+      });
+    }
+  }
   
-  // Voeg Almere als extra zoekterm toe om prioritering te verbeteren
-  if(type) {
-    url += '&fq=type:' + encodeURIComponent(type);
-  }
-  // Bias: voeg "Almere" toe aan query als het adres uit onze regio is
-  if(q.toLowerCase().indexOf('almere') === -1 && q.toLowerCase().indexOf('kerkdriel') === -1){
-    url += '&fq=plaats:Almere';  // Dwing PDOK naar Almere
-  }
+  // Gebruik Nominatim (OpenStreetMap) met STRICT bounding box naar Almere
+  var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + 
+    '&format=json&limit=10&countrycodes=nl';  // Alleen Nederland
+  
+  // STRICT: bounded=1 dwingt Nominatim in deze box te blijven
+  // Almere bounding box: [west, south, east, north] = [lon_min, lat_min, lon_max, lat_max]
+  url += '&viewbox=5.10,52.25,5.45,52.50&bounded=1';
   
   return fetch(url).then(function(r){ return r.json(); }).then(function(d){
-    var docs = d && d.response && d.response.docs;
-    if(!docs || !docs.length) return null;
+    if(!d || !d.length) return null;
     
-    // Filter: als de zoekterm geen plaats bevat, geef voorkeur aan Almere resultaten
-    var filtered = docs;
-    if(q.toLowerCase().indexOf('almere') === -1 && q.toLowerCase().indexOf('kerkdriel') === -1){
-      var almereMatches = docs.filter(function(doc){
-        return (doc.weergavenaam || '').toLowerCase().indexOf('almere') !== -1;
-      });
-      if(almereMatches.length > 0){
-        filtered = almereMatches;  // Gebruik alleen Almere resultaten
-      }
+    // Extra filter: reject Kerkdriel matches
+    var results = d.filter(function(doc){
+      var addrStr = ((doc.address || {}).city || (doc.address || {}).town || '').toLowerCase();
+      return addrStr.indexOf('kerkdriel') === -1;  // Uit sluiten!
+    });
+    
+    if(results.length === 0) results = d;  // Fallback als alles gefilterd is
+    
+    var doc = results[0];
+    if(!doc) return null;
+    
+    // Nominatim format: lat, lon zijn strings
+    var lat = parseFloat(doc.lat);
+    var lon = parseFloat(doc.lon);
+    if(isNaN(lat) || isNaN(lon)) return null;
+    
+    // Bouw label op uit adresgegevens
+    var label = doc.name || '';
+    if(doc.address){
+      var addr = doc.address;
+      if(addr.road) label = (label ? label + ', ' : '') + addr.road;
+      if(addr.city) label = (label ? label + ', ' : '') + addr.city;
+      else if(addr.town) label = (label ? label + ', ' : '') + addr.town;
     }
     
-    var doc = filtered[0];
-    // Bij een hectometerpaal-zoekopdracht: alleen accepteren als de teruggegeven
-    // naam ook echt de gevraagde weg EN hectometer bevat. PDOK's vrije zoekfunctie
-    // kan anders een niet-passend resultaat teruggeven (bv. verkeerde regio).
-    if(type === 'hectometerpaal' && verwacht && verwacht.weg && verwacht.hm){
-      var wegPatroon = verwacht.weg.toUpperCase();
-      var hmPatroon = verwacht.hm.replace(',', '[,.]');
-      var hmRegex = new RegExp('\\b' + hmPatroon + '\\b');
-      var passend = docs.filter(function(d){
-        var naam = (d.weergavenaam || '').toUpperCase();
-        return naam.indexOf(wegPatroon) !== -1 && hmRegex.test(naam);
-      });
-      if(!passend.length) return null; // geen betrouwbare match: val terug op alternatief
-      doc = passend[0];
-    }
-    var m=doc.centroide_ll.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/); // lon lat
-    if(!m) return null;
-    return { lon:parseFloat(m[1]), lat:parseFloat(m[2]), label:doc.weergavenaam };
-  }).catch(function(){ return null; });
+    return { lon: lon, lat: lat, label: label || q };
+  }).catch(function(err){ 
+    console.error('Nominatim geocode error:', err);
+    return null; 
+  });
 }
 
 /* Hectometeraanduiding herkennen, bv. "A6 102,7" of "N307 - HANZEWEG 102,7 DRONTEN" */
