@@ -706,16 +706,8 @@ function refreshPostCapcodes(){
   }
 }
 function loadCfg(){
-  var cfg = null;
-  try{ cfg = JSON.parse(localStorage.getItem('p2000_cfg')); }catch(e){}
-  if(cfg){
-    if(cfg.capcodes && cfg.capcodes.length) FILTER_CAPCODES = cfg.capcodes;
-    if(cfg.posts) POSTS = cfg.posts;
-    if(cfg.units) UNITS = cfg.units;
-    if(cfg.holdMin) HOLD_MIN = cfg.holdMin;
-    if(cfg.tasks) TASKS = normaliseerTaken(cfg.tasks);
-    if(cfg.themeMode) THEME_MODE = cfg.themeMode;
-  }
+  // Instellingen worden geladen via haalTakenCentraal() van de server
+  // Geen localStorage meer nodig
   refreshPostCapcodes();
 }
 var DAGCODES = ['zo','ma','di','wo','do','vr','za'];
@@ -739,12 +731,8 @@ function normaliseerTaken(lijst){
   return out;
 }
 function saveCfg(){
-  try{
-    localStorage.setItem('p2000_cfg', JSON.stringify({
-      capcodes: FILTER_CAPCODES, posts: POSTS, units: UNITS,
-      holdMin: HOLD_MIN, tasks: TASKS, themeMode: THEME_MODE
-    }));
-  }catch(e){}
+  // Opslaan gebeurt via bewaarTakenCentraal() - server/API
+  // Geen localStorage meer nodig
 }
 loadCfg();
 
@@ -796,6 +784,11 @@ function haalTakenCentraal(){
         if(telU){ UNITS = d.units; gewijzigd = true; }
       }
       if(d.holdMin){ HOLD_MIN = d.holdMin; gewijzigd = true; }
+      if(d.themeMode && d.themeMode !== THEME_MODE){ 
+        THEME_MODE = d.themeMode;
+        pasThemaToe();
+        gewijzigd = true;
+      }
       if(typeof renderTellingen === 'function') renderTellingen(d.tellingen || null);
       return gewijzigd;
     }).catch(function(){ return false; });
@@ -809,7 +802,8 @@ function bewaarTakenCentraal(){
       capcodes: FILTER_CAPCODES,
       posts: POSTS,
       units: UNITS,
-      holdMin: HOLD_MIN
+      holdMin: HOLD_MIN,
+      themeMode: THEME_MODE
     })
   }).then(function(r){ return r.json(); }).catch(function(){ return { error:'niet bereikbaar' }; });
 }
@@ -1800,11 +1794,15 @@ document.getElementById('cfgReset').onclick=function(){
   TASKS=DEFAULT_TASKS.slice();
   THEME_MODE='auto';
   refreshPostCapcodes();
-  try{ localStorage.removeItem('p2000_cfg'); }catch(e){}
   renderTasks();
   pasThemaToe();
   openCfg();
-  document.getElementById('cfgMsg').textContent='Standaardinstellingen hersteld.';
+  document.getElementById('cfgMsg').textContent='Standaardinstellingen hersteld. Uploaden om op alle schermen toe te passen...';
+  bewaarTakenCentraal().then(function(res){
+    if(res && res.ok){
+      document.getElementById('cfgMsg').textContent='✅ Standaardinstellingen hersteld en gedeeld.';
+    }
+  });
 };
 
 /* P2000-regel ontleden, bijv: "P 2 BMD-01 DIER TE WATER WINKELWEG ZEEWOLDE 254133 254152" */
