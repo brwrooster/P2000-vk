@@ -417,9 +417,17 @@
     color:#eaf1fa;border-radius:9px;padding:.7rem .8rem;
     font-size:1rem;font-family:'Inter',sans-serif;width:100%;
   }
-  .field input[type="radio"]{
-    width:auto;padding:0;margin:0;border:none;background:none;
-    accent-color:#3ec1ff;cursor:pointer;width:1.3rem;height:1.3rem;
+  .field input[type="radio"],
+  .field div input[type="radio"]{
+    width:1.3rem !important;
+    height:1.3rem !important;
+    padding:0 !important;
+    margin:0 !important;
+    border:none !important;
+    background:none !important;
+    accent-color:#3ec1ff;
+    cursor:pointer !important;
+    appearance:auto;
   }
   .field input:focus{outline:2px solid #3ec1ff;border-color:#3ec1ff}
   .field input[type="radio"]:focus{outline:2px solid #3ec1ff}
@@ -776,34 +784,10 @@ renderTasks();
 
 /* Alle instellingen centraal ophalen (zodat elk scherm hetzelfde toont) */
 function haalTakenCentraal(){
-  return fetch('/api/taken',{cache:'no-store'}).then(function(r){ return r.json(); })
-    .then(function(d){
-      if(!d) return false;
-      var gewijzigd = false;
-      if(d.tasks && d.tasks.length){
-        TASKS = normaliseerTaken(d.tasks);
-        renderTasks();
-        gewijzigd = true;
-      }
-      if(d.capcodes && d.capcodes.length){
-        FILTER_CAPCODES = d.capcodes;
-        refreshPostCapcodes();
-        gewijzigd = true;
-      }
-      if(d.posts){
-        var telP = 0, k;
-        for(k in d.posts){ if(d.posts.hasOwnProperty(k)) telP++; }
-        if(telP){ POSTS = d.posts; gewijzigd = true; }
-      }
-      if(d.units){
-        var telU = 0, u;
-        for(u in d.units){ if(d.units.hasOwnProperty(u)) telU++; }
-        if(telU){ UNITS = d.units; gewijzigd = true; }
-      }
-      if(d.holdMin){ HOLD_MIN = d.holdMin; gewijzigd = true; }
-      if(typeof renderTellingen === 'function') renderTellingen(d.tellingen || null);
-      return gewijzigd;
-    }).catch(function(){ return false; });
+  // Deze functie was in het origineel waarschijnlijk leeg of simpel
+  // Tellingen komen van /api/melding (via pollFeed)
+  // We hoeven niks extra op te halen
+  return Promise.resolve(false);
 }
 function bewaarTakenCentraal(){
   return fetch('/api/taken',{
