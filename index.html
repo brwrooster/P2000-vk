@@ -417,22 +417,10 @@
     color:#eaf1fa;border-radius:9px;padding:.7rem .8rem;
     font-size:1rem;font-family:'Inter',sans-serif;width:100%;
   }
-  .field input[type="radio"],
-  .field div input[type="radio"]{
-    width:1.3rem !important;
-    height:1.3rem !important;
-    padding:0 !important;
-    margin:0 !important;
-    border:none !important;
-    background:none !important;
-    accent-color:#3ec1ff;
-    cursor:pointer !important;
-    appearance:auto;
-    pointer-events:auto !important;
-    position:relative;
-    z-index:10;
+  .field input[type="radio"]{
+    cursor:pointer;
+    margin-right:0.3rem;
   }
-  label span{pointer-events:none}
   .field input:focus{outline:2px solid #3ec1ff;border-color:#3ec1ff}
   .field input[type="radio"]:focus{outline:2px solid #3ec1ff}
   .prio-pick{display:flex;gap:.4rem}
@@ -643,16 +631,10 @@
     </div>
     <div class="field">
       <label>Thema display</label>
-      <div style="display:flex; gap:1.2rem; flex-wrap:wrap; padding:0.8rem 0; pointer-events:auto;">
-        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; pointer-events:auto;">
-          <input type="radio" name="themeMode" value="auto" checked> <span>Automatisch</span>
-        </label>
-        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; pointer-events:auto;">
-          <input type="radio" name="themeMode" value="dag"> <span>Dag</span>
-        </label>
-        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; pointer-events:auto;">
-          <input type="radio" name="themeMode" value="nacht"> <span>Nacht</span>
-        </label>
+      <div style="padding:0.8rem 0;">
+        <label><input type="radio" name="themeMode" value="auto" checked> Automatisch</label><br>
+        <label><input type="radio" name="themeMode" value="dag"> Dag</label><br>
+        <label><input type="radio" name="themeMode" value="nacht"> Nacht</label>
       </div>
     </div>
     <div class="tp-actions">
