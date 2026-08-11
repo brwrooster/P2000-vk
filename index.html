@@ -784,10 +784,37 @@ renderTasks();
 
 /* Alle instellingen centraal ophalen (zodat elk scherm hetzelfde toont) */
 function haalTakenCentraal(){
-  // Deze functie was in het origineel waarschijnlijk leeg of simpel
-  // Tellingen komen van /api/melding (via pollFeed)
-  // We hoeven niks extra op te halen
-  return Promise.resolve(false);
+  return fetch('/api/taken',{cache:'no-store'}).then(function(r){ return r.json(); })
+    .then(function(d){
+      if(!d) return false;
+      var gewijzigd = false;
+      if(d.tasks && d.tasks.length){
+        TASKS = normaliseerTaken(d.tasks);
+        renderTasks();
+        gewijzigd = true;
+      }
+      if(d.capcodes && d.capcodes.length){
+        FILTER_CAPCODES = d.capcodes;
+        refreshPostCapcodes();
+        gewijzigd = true;
+      }
+      if(d.posts){
+        var telP = 0, k;
+        for(k in d.posts){ if(d.posts.hasOwnProperty(k)) telP++; }
+        if(telP){ POSTS = d.posts; gewijzigd = true; }
+      }
+      if(d.units){
+        var telU = 0, u;
+        for(u in d.units){ if(d.units.hasOwnProperty(u)) telU++; }
+        if(telU){ UNITS = d.units; gewijzigd = true; }
+      }
+      if(d.holdMin){ HOLD_MIN = d.holdMin; gewijzigd = true; }
+      // Tellingen laden en weergeven
+      if(d.tellingen){
+        renderTellingen(d.tellingen);
+      }
+      return gewijzigd;
+    }).catch(function(){ return false; });
 }
 function bewaarTakenCentraal(){
   return fetch('/api/taken',{
