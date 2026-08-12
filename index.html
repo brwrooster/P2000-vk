@@ -640,7 +640,7 @@
     <div class="tp-actions">
       <button class="btn primary" id="cfgSave">Opslaan</button>
       <button class="btn ghost" id="cfgReset">Standaard herstellen</button>
-      <button class="btn ghost" id="viewLog">📋 Log bekijken</button>
+      <button class="btn ghost" onclick="toonLog()">📋 Log bekijken</button>
     </div>
   </div>
   <p class="tp-hint" id="cfgMsg">Instellingen gelden voor alle schermen.</p>
@@ -1837,7 +1837,7 @@ document.getElementById('cfgReset').onclick=function(){
 };
 
 /* Log viewer */
-document.getElementById('viewLog').onclick=function(){
+function toonLog(){
   fetch('/api/log').then(function(r){ return r.json(); })
     .then(function(data){
       var logs = data.logs || [];
@@ -1865,7 +1865,7 @@ document.getElementById('viewLog').onclick=function(){
     }).catch(function(e){
       document.getElementById('cfgMsg').textContent = '❌ Log laden mislukt: '+e.message;
     });
-};
+}
 
 /* P2000-regel ontleden, bijv: "P 2 BMD-01 DIER TE WATER WINKELWEG ZEEWOLDE 254133 254152" */
 /* Meldingssoorten zoals de meldkamer ze schrijft (langste eerst herkennen) */
