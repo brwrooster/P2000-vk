@@ -1959,6 +1959,7 @@ function parseP2000(raw){
     .replace(/\bP\s*[12]\b/i,'')
     .replace(/\d{6,7}/g,'')
     .replace(/\b[A-Za-z]{2,4}[-\s]?\d{1,2}\b/,'')   // meldkamer/regiocode, bv. BMD-01 / bmd-04
+    .replace(/\b[AN]\s?\d{1,3}\s+(RECHTS|LINKS|RECHTSBAAN|LINKSBAAN)\s*-\s*(?=[AN]\s?\d)/g, '')  // Filter "A6 RECHTS - " voor dubbele weg-aanduidingen
     .replace(/\s+/g,' ').trim();
 
   mid = schrijfUit(mid);
