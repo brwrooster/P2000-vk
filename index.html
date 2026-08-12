@@ -1214,6 +1214,19 @@ function pollFeed(){
         var p = parseFeed(m);
         showAlarm(p.type, p.addr, p.prio, p.units, HOLD_MIN*60*1000, p.mid, p.kanaal);
         meldFeedVoorTelling(p.raw, m.id);
+        
+        // Log naar server
+        var meldingtekst = p.type + ' ' + p.addr;
+        fetch('/api/pi', {
+          method: 'POST',
+          headers: {'content-type': 'application/json'},
+          body: JSON.stringify({
+            text: meldingtekst,
+            sleutel: 'veluwsekant2026',
+            bronId: m.id,  // voorkom duplicate logging
+            test: false
+          })
+        }).catch(function(e){ console.log('Log fout:', e); });
       }
     }
     firstPoll = false;
