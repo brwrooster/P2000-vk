@@ -93,6 +93,7 @@ function actualiseerTellingenVoorWeergave(tellingen) {
 export default {
   async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    if (url.pathname === "/api/log") return logAPI(request, env);
     if (url.pathname === "/api/melding") return meldingJSON();
     if (url.pathname === "/api/taken") return takenAPI(request, env);
     if (url.pathname === "/api/pi") return piAPI(request, env, ctx);
@@ -175,13 +176,39 @@ async function piAPI(request, env, ctx) {
 
       await env.CONFIG.put("laatste_pi_melding", JSON.stringify(melding));
 
-      // Tellingen bijwerken, tenzij dit een oefen-/testmelding is of al geteld is
+      // Log melding naar KV
+      const nu = Date.now();
+      const logEntry = {
+        ts: nu,
+        text: melding.text,
+        date: new Date(nu).toISOString()
+      };
+      
+      // Haal bestaande logs op
+      let logs = [];
+      try {
+        const bestaande = await env.CONFIG.get("melding_logs");
+        if (bestaande) logs = JSON.parse(bestaande);
+      } catch (e) {}
+      
+      // Voeg nieuwe melding toe
+      logs.push(logEntry);
+      
+      // Verwijder meldingen ouder dan 7 dagen
+      const zevenDagenGeleden = nu - (7 * 24 * 60 * 60 * 1000);
+      logs = logs.filter(log => log.ts > zevenDagenGeleden);
+      
+      // Sla terug op (max 500 logs)
+      if (logs.length > 500) logs = logs.slice(-500);
+      await env.CONFIG.put("melding_logs", JSON.stringify(logs));
+
+      // Tellingen bijwerken
       if (!body.test && magTellen) {
-        const nu = new Date();
+        const nuDatum = new Date();
         const bestaandeTellingen = await env.CONFIG.get("tellingen");
         const nieuweTellingen = werkTellingenBij(
           bestaandeTellingen ? JSON.parse(bestaandeTellingen) : null,
-          nu,
+          nuDatum,
           melding.text
         );
         await env.CONFIG.put("tellingen", JSON.stringify(nieuweTellingen));
@@ -255,6 +282,33 @@ async function takenAPI(request, env) {
     return new Response(JSON.stringify(data), { headers });
   } catch (e) {
     return new Response(JSON.stringify({ error: String(e) }), { headers });
+  }
+}
+
+/* Meldingenlog ophalen (afgelopen 7 dagen) */
+async function logAPI(request, env) {
+  const headers = {
+    "content-type": "application/json; charset=UTF-8",
+    "cache-control": "no-store",
+    "access-control-allow-origin": "*"
+  };
+  if (!env.CONFIG) {
+    return new Response(JSON.stringify({ error: "geen opslag ingesteld" }), { headers });
+  }
+  try {
+    const logs = await env.CONFIG.get("melding_logs");
+    const data = logs ? JSON.parse(logs) : [];
+    
+    // Sorteer van nieuw naar oud
+    data.sort((a, b) => b.ts - a.ts);
+    
+    return new Response(JSON.stringify({
+      count: data.count,
+      logs: data,
+      generated: new Date().toISOString()
+    }), { headers });
+  } catch (e) {
+    return new Response(JSON.stringify({ error: String(e), logs: [] }), { headers });
   }
 }
 

@@ -640,6 +640,7 @@
     <div class="tp-actions">
       <button class="btn primary" id="cfgSave">Opslaan</button>
       <button class="btn ghost" id="cfgReset">Standaard herstellen</button>
+      <button class="btn ghost" id="viewLog">📋 Log bekijken</button>
     </div>
   </div>
   <p class="tp-hint" id="cfgMsg">Instellingen gelden voor alle schermen.</p>
@@ -1614,7 +1615,28 @@ var panel=document.getElementById('testPanel');
 document.getElementById('tpClose').onclick=function(){ panel.classList.remove('open'); };
 
 /* Koppeling: logo -> testversie (alleen op de live-pagina actief) */
-document.getElementById('logoLink').onclick=function(){ if(IS_LIVE && TEST_URL) location.href=TEST_URL; };
+var logoClickCount = 0;
+document.getElementById('logoLink').onclick=function(){ 
+  if(IS_LIVE && TEST_URL) { 
+    location.href=TEST_URL; 
+  } else {
+    // 5x klik op logo = instellingen openen
+    logoClickCount++;
+    if(logoClickCount >= 5) {
+      logoClickCount = 0;
+      openCfg();
+    }
+    setTimeout(function(){ logoClickCount = 0; }, 1000); // reset na 1 sec
+  }
+};
+
+// S toets = instellingen
+document.addEventListener('keydown', function(e) {
+  if((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey) {
+    e.preventDefault();
+    openCfg();
+  }
+});
 if(!IS_LIVE){
   document.getElementById('logoLink').style.cursor='default';
 }
@@ -1812,6 +1834,37 @@ document.getElementById('cfgReset').onclick=function(){
   pasThemaToe();
   openCfg();
   document.getElementById('cfgMsg').textContent='Standaardinstellingen hersteld.';
+};
+
+/* Log viewer */
+document.getElementById('viewLog').onclick=function(){
+  fetch('/api/log').then(function(r){ return r.json(); })
+    .then(function(data){
+      var logs = data.logs || [];
+      var html = '<div style="background:#0e1524;border:1px solid #20304a;border-radius:8px;padding:1rem;max-height:60vh;overflow-y:auto;margin:1rem 0;">';
+      html += '<h3 style="margin-top:0;">📋 Meldingen (afgelopen 7 dagen)</h3>';
+      
+      if(logs.length === 0){
+        html += '<p>Geen meldingen gelogd.</p>';
+      } else {
+        html += '<p><strong>'+logs.length+' meldingen</strong></p>';
+        html += '<table style="width:100%;border-collapse:collapse;font-size:0.85rem;">';
+        html += '<tr style="border-bottom:1px solid #20304a;"><th style="text-align:left;padding:0.5rem;">Tijd</th><th style="text-align:left;padding:0.5rem;">Melding</th></tr>';
+        
+        for(var i=0; i<logs.length; i++){
+          var log = logs[i];
+          var datum = new Date(log.ts);
+          var tijd = datum.toLocaleString('nl-NL');
+          html += '<tr style="border-bottom:1px solid #20304a;"><td style="padding:0.5rem;color:#8395ad;white-space:nowrap;">'+tijd+'</td><td style="padding:0.5rem;">'+log.text+'</td></tr>';
+        }
+        html += '</table>';
+      }
+      
+      html += '</div>';
+      document.getElementById('cfgMsg').innerHTML = html;
+    }).catch(function(e){
+      document.getElementById('cfgMsg').textContent = '❌ Log laden mislukt: '+e.message;
+    });
 };
 
 /* P2000-regel ontleden, bijv: "P 2 BMD-01 DIER TE WATER WINKELWEG ZEEWOLDE 254133 254152" */
