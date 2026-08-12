@@ -1197,6 +1197,7 @@ function matchtCapcode(item){
   return false;
 }
 var firstPoll = true;
+var laatstGeloefdeBronIds = {}; // Cache voor vermijden duplicate logging
 function pollFeed(){
   fetch('/api/melding',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(d){
     setConn(!d.error);
@@ -1215,18 +1216,24 @@ function pollFeed(){
         showAlarm(p.type, p.addr, p.prio, p.units, HOLD_MIN*60*1000, p.mid, p.kanaal);
         meldFeedVoorTelling(p.raw, m.id);
         
-        // Log naar server
-        var meldingtekst = p.type + ' ' + p.addr;
-        fetch('/api/pi', {
-          method: 'POST',
-          headers: {'content-type': 'application/json'},
-          body: JSON.stringify({
-            text: meldingtekst,
-            sleutel: 'veluwsekant2026',
-            bronId: m.id,  // voorkom duplicate logging
-            test: false
-          })
-        }).catch(function(e){ console.log('Log fout:', e); });
+        // Controleer of we deze bronId al hebben gelogd (voorkomen duplicates)
+        if(!laatstGeloefdeBronIds[m.id]){
+          // Log naar server
+          var meldingtekst = p.type + ' ' + p.addr;
+          fetch('/api/pi', {
+            method: 'POST',
+            headers: {'content-type': 'application/json'},
+            body: JSON.stringify({
+              text: meldingtekst,
+              sleutel: 'veluwsekant2026',
+              bronId: m.id,
+              test: false
+            })
+          }).catch(function(e){ console.log('Log fout:', e); });
+          
+          // Markeer als gelogd
+          laatstGeloefdeBronIds[m.id] = true;
+        }
       }
     }
     firstPoll = false;
@@ -1268,6 +1275,48 @@ pollEigenOntvanger();
 
 /* ================= Geocoding (PDOK Locatieserver) ================= */
 function geocode(q, type, verwacht){
+  // Voor hectometerpalen: eerst PDOK proberen
+  if(type === 'hectometerpaal'){
+    return geocodePDOK(q).then(function(result){
+      if(result) return result;
+      // PDOK werkte niet -> fallback naar Nominatim
+      return geocodeNominatim(q);
+    }).catch(function(){ 
+      // Error -> fallback naar Nominatim
+      return geocodeNominatim(q);
+    });
+  }
+  
+  // Voor andere types: Nominatim
+  return geocodeNominatim(q);
+}
+
+/* PDOK Locatieserver - veel beter voor hectometerpalen */
+function geocodePDOK(q){
+  var url = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q=' + encodeURIComponent(q) + '&fq=*:*&rows=5';
+  
+  return fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    if(!d || !d.response || !d.response.docs || !d.response.docs.length) return null;
+    
+    var doc = d.response.docs[0];
+    if(!doc) return null;
+    
+    // PDOK geeft RD coördinaten (X, Y), niet lat/lon
+    var lat = doc.centroide_ll ? doc.centroide_ll[1] : null;
+    var lon = doc.centroide_ll ? doc.centroide_ll[0] : null;
+    
+    if(!lat || !lon) return null;
+    
+    var label = doc.weergavenaam || doc.id || '';
+    return { lon: lon, lat: lat, label: label || q };
+  }).catch(function(err){ 
+    console.error('PDOK geocode error:', err);
+    return null; 
+  });
+}
+
+/* Nominatim fallback */
+function geocodeNominatim(q){
   // Bepaal de plaats uit de query zelf (bijv. "ALMERE" uit "GRIENDENBRUG ALMERE")
   var explicitPlaats = null;
   var plaatsen = ['almere', 'amsterdam', 'rotterdam', 'den haag', 'utrecht', 'kerkdriel', 'arnhem', 'nijmegen'];

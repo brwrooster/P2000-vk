@@ -191,16 +191,24 @@ async function piAPI(request, env, ctx) {
         if (bestaande) logs = JSON.parse(bestaande);
       } catch (e) {}
       
-      // Voeg nieuwe melding toe
-      logs.push(logEntry);
+      // Check: Is dezelfde melding van de afgelopen 2 minuten al gelogd?
+      const twoMinutesAgo = nu - (2 * 60 * 1000);
+      const isDuplicate = logs.some(log => 
+        log.text === melding.text && log.ts > twoMinutesAgo
+      );
       
-      // Verwijder meldingen ouder dan 7 dagen
-      const zevenDagenGeleden = nu - (7 * 24 * 60 * 60 * 1000);
-      logs = logs.filter(log => log.ts > zevenDagenGeleden);
-      
-      // Sla terug op (max 500 logs)
-      if (logs.length > 500) logs = logs.slice(-500);
-      await env.CONFIG.put("melding_logs", JSON.stringify(logs));
+      if (!isDuplicate) {
+        // Voeg nieuwe melding toe
+        logs.push(logEntry);
+        
+        // Verwijder meldingen ouder dan 7 dagen
+        const zevenDagenGeleden = nu - (7 * 24 * 60 * 60 * 1000);
+        logs = logs.filter(log => log.ts > zevenDagenGeleden);
+        
+        // Sla terug op (max 500 logs)
+        if (logs.length > 500) logs = logs.slice(-500);
+        await env.CONFIG.put("melding_logs", JSON.stringify(logs));
+      }
 
       // Tellingen bijwerken
       if (!body.test && magTellen) {
