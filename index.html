@@ -1565,7 +1565,10 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal){
     // hectometerpaal heeft voorrang (bv. "A6 102,7")
     var hmInfo = vindHectometer((geoHint||'') + ' ' + (addr||''));
     if(hmInfo){
-      // Bij hectometer: voeg Almere toe voor beter zoeken
+      // Bij hectometer: format als "km" voor beter zoeken
+      var kmStr = hmInfo.hm.replace(',', '');
+      cand.push({ q: hmInfo.weg + ' km ' + kmStr + ' Almere', type: 'hectometerpaal' });
+      cand.push({ q: hmInfo.weg + ' kilometer ' + kmStr + ' Almere', type: 'hectometerpaal' });
       cand.push({ q: hmInfo.weg + ' ' + hmInfo.hm + ' Almere', type: 'hectometerpaal' });
       cand.push({ q: hmInfo.weg + ' ' + hmInfo.hm, type: 'hectometerpaal' });
       cand.push({ q: hmInfo.weg + ' ' + hmInfo.hm });
