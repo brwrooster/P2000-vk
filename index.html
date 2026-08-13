@@ -1213,11 +1213,11 @@ function pollFeed(){
       // bij openen alleen tonen als recent; daarna elke echt nieuwe melding
       if(!firstPoll || recent){
         var p = parseFeed(m);
-        showAlarm(p.type, p.addr, p.prio, p.units, HOLD_MIN*60*1000, p.mid, p.kanaal);
-        meldFeedVoorTelling(p.raw, m.id);
         
         // Controleer of we deze bronId al hebben gelogd (voorkomen duplicates)
         if(!laatstGeloefdeBronIds[m.id]){
+          showAlarm(p.type, p.addr, p.prio, p.units, HOLD_MIN*60*1000, p.mid, p.kanaal);
+          meldFeedVoorTelling(p.raw, m.id);  // Alleen tellen bij EERSTE keer!
           // Log naar server
           var meldingtekst = p.type + ' ' + p.addr;
           fetch('/api/pi', {
