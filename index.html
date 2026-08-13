@@ -2006,14 +2006,32 @@ function parseP2000(raw){
   var kanaal='';
   var km = s.match(/\bBMD[-\s]?(\d{1,2})\b/i);
   if(km) kanaal = 'Incidentkanaal ' + parseInt(km[1],10);
+  
+  // SUBTYPES - ALTIJD BESCHIKBAAR!
+  var SUBTYPES = [
+    'SCHEEPVAART', 'WONING', 'AUTO', 'BOERDERIJ', 'INDUSTRIE', 'GEBOUW', 
+    'HUIS', 'GARAGE', 'LOODS', 'KANTOOR', 'WINKEL', 'BERM', 'BOSSCHAGE',
+    'AMBULANCE', 'ONGEVAL', 'BRAND', 'BR', 'ASSISTENTIE', 'DIER', 'WATER',
+    'VERKEERSONGEVAL', 'MEDISCHE', 'BUS', 'TREIN', 'FIETS', 'MOTOR',
+    'TRUCK', 'BRANDTRAP', 'BRANDKRAAN', 'ROOK', 'EXPLOSIE', 'LEKKAGE',
+    'OVERSTROMING', 'STORM', 'BOOM', 'WEGAFZETTING', 'VERLICHTING', 'KRAAN',
+    'AFVALCONTAINER', 'CONTAINER', 'ELEKTRICITEIT', 'TELEFOON', 'PIJP',
+    'BRANDEN', 'ZOEKING', 'ZOEKTOCHT', 'VERMIST', 'KINDERVERZORGING',
+    'BROMMER', 'SCHUUR', 'VRACHTAUTO', 'CAMPER', 'CARAVAN', 'VRACHTWAGEN',
+    'TANKER', 'AANHANGER', 'BUSJE', 'BESTELWAGEN', 'MINIBUS', 'TOURINGCAR',
+    'ZIEKENAUTO', 'VOERTUIG', 'VOERTUIGEN', 'PERSONEN', 'GOEDEREN'
+  ];
   var mid=s
     .replace(/\bPRIO\s*[12]\b/i,'')
     .replace(/\bP\s*[12]\b/i,'')
     .replace(/\d{6,7}/g,'')
-    .replace(/\b[A-Za-z]{2,4}[-\s]?\d{1,2}\b/,'')   // meldkamer/regiocode, bv. BMD-01 / bmd-04
-    .replace(/\b[AN]\s?\d{1,3}\s+(RECHTS|LINKS|RECHTSBAAN|LINKSBAAN)\s*-\s*(?=[AN]\s?\d)/g, '')  // Filter "A6 RECHTS - " voor dubbele weg-aanduidingen
+    .replace(/\b[A-Za-z]{2,4}[-\s]?\d{1,2}\b/,'')   // meldkamer/regiocode
+    .replace(/\b[AN]\s?\d{1,3}\s+(RECHTS|LINKS|RECHTSBAAN|LINKSBAAN)\s*-\s*(?=[AN]\s?\d)/g, '')
     .replace(/\s+/g,' ').trim();
-
+  
+  // SPLIT TYPE/ADDR HIER (voor schrijfUit filteren!)
+  var cleanMid = mid;  // Dit gebruiken voor split
+  
   mid = schrijfUit(mid);
 
   // toevoeging(en) tussen haakjes horen bij de soort, niet bij het adres
@@ -2023,17 +2041,11 @@ function parseP2000(raw){
     return ' ';
   }).replace(/\s+/g,' ').trim();
 
-  // 1) bekende soort vooraan herkennen -> rest is adres
+  // 1) SKIP SOORTEN-matching - use place-based parsing instead (reliable for subtypes)
+  // This ensures BR SCHEEPVAART stays together
+  
   var laag = mid.toLowerCase(), i, gevonden = '';
-  for(i=0;i<SOORTEN.length;i++){
-    if(laag.indexOf(SOORTEN[i]) === 0 && SOORTEN[i].length > gevonden.length) gevonden = SOORTEN[i];
-  }
-  if(gevonden){
-    var type1 = mid.slice(0, gevonden.length).trim();
-    var addr1 = mid.slice(gevonden.length).trim();
-    if(extras.length) type1 = type1 + ' (' + extras.join(', ') + ')';
-    return { prio:prio, type:type1, addr:addr1, units:caps.join(' '), mid:mid, kanaal:kanaal };
-  }
+  // Skip this and go straight to place-based parsing
 
   // 2) terugval: laatste twee woorden als adres (alleen als er genoeg woorden zijn)
   var words=mid.split(' ').filter(Boolean);
@@ -2057,8 +2069,12 @@ function parseP2000(raw){
     'ZIEKENAUTO', 'VOERTUIG', 'VOERTUIGEN', 'PERSONEN', 'GOEDEREN'
   ];
   
-  var allWords = mid.split(/\s+/);
+  // PARSE VAN cleanMid (VOOR schrijfUit filtering!)
+  var allWords = cleanMid.split(/\s+/);
   var allWordsUpper = allWords.map(function(w){ return w.toUpperCase(); });
+  
+  // Check: is woord 2 een subtype?
+  var isWord2Subtype = allWords.length >= 2 && SUBTYPES.indexOf(allWordsUpper[1]) !== -1;
   
   // Zoek PLAATS
   var plaatsIndex = -1;
@@ -2069,10 +2085,14 @@ function parseP2000(raw){
     }
   }
   
-  if(plaatsIndex > 1){
-    // Plaats gevonden op index X
-    // Type = minstens 2 woorden
-    var typeEndIndex = Math.max(plaatsIndex - 1, 2);  // Minstens 2 woorden!
+  // SMART PARSING
+  if(isWord2Subtype && plaatsIndex > 2){
+    // Woord 2 is subtype → eerste 2 = type
+    type = allWords.slice(0, 2).join(' ');
+    addr = allWords.slice(2).join(' ');
+  } else if(plaatsIndex > 1){
+    // Plaats gevonden - zorg voor minstens 2 woorden type
+    var typeEndIndex = Math.max(plaatsIndex - 1, 2);
     type = allWords.slice(0, typeEndIndex).join(' ');
     addr = allWords.slice(typeEndIndex).join(' ');
   } else if(plaatsIndex === 1){
@@ -2080,7 +2100,7 @@ function parseP2000(raw){
     type = allWords[0];
     addr = allWords.slice(1).join(' ');
   } else {
-    // Geen plaats gevonden - fallback
+    // Fallback
     type = allWords[0];
     addr = allWords.slice(1).join(' ');
   }
