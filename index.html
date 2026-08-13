@@ -2038,7 +2038,37 @@ function parseP2000(raw){
   // 2) terugval: laatste twee woorden als adres (alleen als er genoeg woorden zijn)
   var words=mid.split(' ').filter(Boolean);
   var type=mid, addr='';
-  if(words.length>=4){ addr=words.slice(-2).join(' '); type=words.slice(0,-2).join(' '); }
+  
+  // Bekende plaatsen (sleutel voor waar adres begint)
+  var plaatsen = ['ALMERE', 'AMSTERDAM', 'ROTTERDAM', 'AMSTERDAM-ZO', 'ARNHEM', 'ROTTERDAM-ZO', 'UTRECHT', 'DEN HAAG', 'LEIDEN', 'HAARLEM'];
+  
+  var allWords = mid.split(/\s+/);
+  var allWordsUpper = allWords.map(function(w){ return w.toUpperCase(); });
+  
+  // Zoek PLAATS
+  var plaatsIndex = -1;
+  for(var pi=0; pi<allWordsUpper.length; pi++){
+    if(plaatsen.indexOf(allWordsUpper[pi]) !== -1){
+      plaatsIndex = pi;
+      break;
+    }
+  }
+  
+  if(plaatsIndex > 1){
+    // Plaats gevonden op index X
+    // Type = minstens 2 woorden
+    var typeEndIndex = Math.max(plaatsIndex - 1, 2);  // Minstens 2 woorden!
+    type = allWords.slice(0, typeEndIndex).join(' ');
+    addr = allWords.slice(typeEndIndex).join(' ');
+  } else if(plaatsIndex === 1){
+    // Plaats is woord 2
+    type = allWords[0];
+    addr = allWords.slice(1).join(' ');
+  } else {
+    // Geen plaats gevonden - fallback
+    type = allWords[0];
+    addr = allWords.slice(1).join(' ');
+  }
   if(extras.length) type = type + ' (' + extras.join(', ') + ')';
   
   // 3) Controleer of addr een lokale locatienaam bevat (LOCATIES_CONFIG)
