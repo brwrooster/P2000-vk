@@ -2042,6 +2042,21 @@ function parseP2000(raw){
   // Bekende plaatsen (sleutel voor waar adres begint)
   var plaatsen = ['ALMERE', 'AMSTERDAM', 'ROTTERDAM', 'AMSTERDAM-ZO', 'ARNHEM', 'ROTTERDAM-ZO', 'UTRECHT', 'DEN HAAG', 'LEIDEN', 'HAARLEM'];
   
+  // COMPLETE subtypes lijst
+  var subtypes = [
+    'SCHEEPVAART', 'WONING', 'AUTO', 'BOERDERIJ', 'INDUSTRIE', 'GEBOUW', 
+    'HUIS', 'GARAGE', 'LOODS', 'KANTOOR', 'WINKEL', 'BERM', 'BOSSCHAGE',
+    'AMBULANCE', 'ONGEVAL', 'BRAND', 'BR', 'ASSISTENTIE', 'DIER', 'WATER',
+    'VERKEERSONGEVAL', 'MEDISCHE', 'BUS', 'TREIN', 'FIETS', 'MOTOR',
+    'TRUCK', 'BRANDTRAP', 'BRANDKRAAN', 'ROOK', 'EXPLOSIE', 'LEKKAGE',
+    'OVERSTROMING', 'STORM', 'BOOM', 'WEGAFZETTING', 'VERLICHTING', 'KRAAN',
+    'AFVALCONTAINER', 'CONTAINER', 'ELEKTRICITEIT', 'TELEFOON', 'PIJP',
+    'BRANDEN', 'ZOEKING', 'ZOEKTOCHT', 'VERMIST', 'KINDERVERZORGING',
+    'BROMMER', 'SCHUUR', 'VRACHTAUTO', 'CAMPER', 'CARAVAN', 'VRACHTWAGEN',
+    'TANKER', 'AANHANGER', 'BUSJE', 'BESTELWAGEN', 'MINIBUS', 'TOURINGCAR',
+    'ZIEKENAUTO', 'VOERTUIG', 'VOERTUIGEN', 'PERSONEN', 'GOEDEREN'
+  ];
+  
   var allWords = mid.split(/\s+/);
   var allWordsUpper = allWords.map(function(w){ return w.toUpperCase(); });
   
