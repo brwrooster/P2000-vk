@@ -178,9 +178,22 @@ async function piAPI(request, env, ctx) {
 
       // Log melding naar KV
       const nu = Date.now();
+      
+      // ORIGINEEL bericht bewaren (met voertuignummers!)
+      const originalText = melding.text;
+      
+      // GENORMALISEERD voor dedup check
+      var textForDedup = melding.text
+        .replace(/^P\s*[12]\s*/i, '')        // Verwijder "P 1"
+        .replace(/\bBMD-\d+\b/i, '')         // Verwijder "BMD-01"
+        .replace(/\s*\([^)]*\)/g, '')        // Verwijder "(zolder)"
+        .replace(/\d{6,7}/g, '')             // Verwijder voertuignummers
+        .replace(/\s+/g, ' ')                // Normaliseer spaties
+        .trim();
+      
       const logEntry = {
         ts: nu,
-        text: melding.text,
+        text: originalText,  // ← ORIGINEEL met voertuignummers!
         date: new Date(nu).toISOString()
       };
       
@@ -191,11 +204,18 @@ async function piAPI(request, env, ctx) {
         if (bestaande) logs = JSON.parse(bestaande);
       } catch (e) {}
       
-      // Check: Is dezelfde melding van de afgelopen 2 minuten al gelogd?
+      // Check: is DEZELFDE melding (genormaliseerd) van afgelopen 2 minuten al gelogd?
       const twoMinutesAgo = nu - (2 * 60 * 1000);
-      const isDuplicate = logs.some(log => 
-        log.text === melding.text && log.ts > twoMinutesAgo
-      );
+      const isDuplicate = logs.some(log => {
+        var existingNorm = (log.text || '')
+          .replace(/^P\s*[12]\s*/i, '')
+          .replace(/\bBMD-\d+\b/i, '')
+          .replace(/\s*\([^)]*\)/g, '')
+          .replace(/\d{6,7}/g, '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        return existingNorm === textForDedup && log.ts > twoMinutesAgo;
+      });
       
       if (!isDuplicate) {
         // Voeg nieuwe melding toe
