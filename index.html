@@ -2087,12 +2087,20 @@ function parseP2000(raw){
   
   // SMART PARSING
   if(isWord2Subtype && plaatsIndex > 2){
-    // Woord 2 is subtype → eerste 2 = type
-    type = allWords.slice(0, 2).join(' ');
-    addr = allWords.slice(2).join(' ');
+    // Neem tot plaats MINUS straatnaam (2 woorden voor plaats = straat + plaats)
+    var typeEndIndex = Math.max(2, plaatsIndex - 2);
+    type = allWords.slice(0, typeEndIndex).join(' ');
+    addr = allWords.slice(typeEndIndex).join(' ');
+    
+    // Filter BR en BRAND eruit (schrijfUit doet BR→Brand, dus dubbel)
+    type = type
+      .replace(/\bBR\b/i, '')              // BR weg
+      .replace(/\bBRAND\b/i, '')           // BRAND weg
+      .replace(/\s+/g, ' ')                // Spaties normaliseren
+      .trim();
   } else if(plaatsIndex > 1){
-    // Plaats gevonden - zorg voor minstens 2 woorden type
-    var typeEndIndex = Math.max(plaatsIndex - 1, 2);
+    // Plaats gevonden - zorg voor minstens 2 woorden type (straatnaam + plaats)
+    var typeEndIndex = Math.max(plaatsIndex - 2, 2);
     type = allWords.slice(0, typeEndIndex).join(' ');
     addr = allWords.slice(typeEndIndex).join(' ');
   } else if(plaatsIndex === 1){
