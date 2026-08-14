@@ -2009,6 +2009,7 @@ function parseP2000(raw){
   
   // SUBTYPES - ALTIJD BESCHIKBAAR!
   var SUBTYPES = [
+    // Types
     'SCHEEPVAART', 'WONING', 'AUTO', 'BOERDERIJ', 'INDUSTRIE', 'GEBOUW', 
     'HUIS', 'GARAGE', 'LOODS', 'KANTOOR', 'WINKEL', 'BERM', 'BOSSCHAGE',
     'AMBULANCE', 'ONGEVAL', 'BRAND', 'BR', 'ASSISTENTIE', 'DIER', 'WATER',
@@ -2019,7 +2020,10 @@ function parseP2000(raw){
     'BRANDEN', 'ZOEKING', 'ZOEKTOCHT', 'VERMIST', 'KINDERVERZORGING',
     'BROMMER', 'SCHUUR', 'VRACHTAUTO', 'CAMPER', 'CARAVAN', 'VRACHTWAGEN',
     'TANKER', 'AANHANGER', 'BUSJE', 'BESTELWAGEN', 'MINIBUS', 'TOURINGCAR',
-    'ZIEKENAUTO', 'VOERTUIG', 'VOERTUIGEN', 'PERSONEN', 'GOEDEREN'
+    'ZIEKENAUTO', 'VOERTUIG', 'VOERTUIGEN', 'PERSONEN', 'GOEDEREN',
+    'WEGVERVOER',
+    // Connectoren
+    'TE', 'NAAR', 'VAN', 'IN', 'OP', 'BIJ', 'AAN'
   ];
   var mid=s
     .replace(/\bPRIO\s*[12]\b/i,'')
@@ -2032,89 +2036,59 @@ function parseP2000(raw){
   // SPLIT TYPE/ADDR HIER (voor schrijfUit filteren!)
   var cleanMid = mid;  // Dit gebruiken voor split
   
-  mid = schrijfUit(mid);
+  // SKIP - only transform type later
+  // mid = schrijfUit(mid);
 
   // toevoeging(en) tussen haakjes horen bij de soort, niet bij het adres
   var extras = [];
-  mid = mid.replace(/\(([^)]*)\)/g, function(m, inhoud){
+  cleanMid = cleanMid.replace(/\(([^)]*)\)/g, function(m, inhoud){
     if(inhoud && inhoud.trim()) extras.push(inhoud.trim());
     return ' ';
   }).replace(/\s+/g,' ').trim();
 
-  // 1) SKIP SOORTEN-matching - use place-based parsing instead (reliable for subtypes)
-  // This ensures BR SCHEEPVAART stays together
-  
-  var laag = mid.toLowerCase(), i, gevonden = '';
-  // Skip this and go straight to place-based parsing
-
-  // 2) terugval: laatste twee woorden als adres (alleen als er genoeg woorden zijn)
-  var words=mid.split(' ').filter(Boolean);
-  var type=mid, addr='';
-  
-  // Bekende plaatsen (sleutel voor waar adres begint)
-  var plaatsen = ['ALMERE', 'AMSTERDAM', 'ROTTERDAM', 'AMSTERDAM-ZO', 'ARNHEM', 'ROTTERDAM-ZO', 'UTRECHT', 'DEN HAAG', 'LEIDEN', 'HAARLEM'];
-  
-  // COMPLETE subtypes lijst
-  var subtypes = [
-    'SCHEEPVAART', 'WONING', 'AUTO', 'BOERDERIJ', 'INDUSTRIE', 'GEBOUW', 
-    'HUIS', 'GARAGE', 'LOODS', 'KANTOOR', 'WINKEL', 'BERM', 'BOSSCHAGE',
-    'AMBULANCE', 'ONGEVAL', 'BRAND', 'BR', 'ASSISTENTIE', 'DIER', 'WATER',
-    'VERKEERSONGEVAL', 'MEDISCHE', 'BUS', 'TREIN', 'FIETS', 'MOTOR',
-    'TRUCK', 'BRANDTRAP', 'BRANDKRAAN', 'ROOK', 'EXPLOSIE', 'LEKKAGE',
-    'OVERSTROMING', 'STORM', 'BOOM', 'WEGAFZETTING', 'VERLICHTING', 'KRAAN',
-    'AFVALCONTAINER', 'CONTAINER', 'ELEKTRICITEIT', 'TELEFOON', 'PIJP',
-    'BRANDEN', 'ZOEKING', 'ZOEKTOCHT', 'VERMIST', 'KINDERVERZORGING',
-    'BROMMER', 'SCHUUR', 'VRACHTAUTO', 'CAMPER', 'CARAVAN', 'VRACHTWAGEN',
-    'TANKER', 'AANHANGER', 'BUSJE', 'BESTELWAGEN', 'MINIBUS', 'TOURINGCAR',
-    'ZIEKENAUTO', 'VOERTUIG', 'VOERTUIGEN', 'PERSONEN', 'GOEDEREN'
-  ];
-  
-  // PARSE VAN cleanMid (VOOR schrijfUit filtering!)
+  // PARSE VAN cleanMid
   var allWords = cleanMid.split(/\s+/);
   var allWordsUpper = allWords.map(function(w){ return w.toUpperCase(); });
   
-  // Check: is woord 2 een subtype?
-  var isWord2Subtype = allWords.length >= 2 && SUBTYPES.indexOf(allWordsUpper[1]) !== -1;
+  // SKIP BR+BRAND dubbel
+  if(allWordsUpper[0] === 'BR' && allWordsUpper[1] === 'BRAND'){
+    allWords = allWords.slice(0, 1).concat(allWords.slice(2));
+    allWordsUpper = allWordsUpper.slice(0, 1).concat(allWordsUpper.slice(2));
+  }
   
-  // Zoek PLAATS
-  var plaatsIndex = -1;
-  for(var pi=0; pi<allWordsUpper.length; pi++){
-    if(plaatsen.indexOf(allWordsUpper[pi]) !== -1){
-      plaatsIndex = pi;
-      break;
+  // LOOP: Zolang woorden in SUBTYPES staan = TYPE
+  var typeEndIndex = 0;
+  for(var i = 0; i < allWordsUpper.length; i++){
+    if(SUBTYPES.indexOf(allWordsUpper[i]) !== -1){
+      typeEndIndex = i + 1;  // Teller verder
+    } else {
+      break;  // STOP - woord is NIET in SUBTYPES
     }
   }
   
-  // SMART PARSING
-  if(isWord2Subtype && plaatsIndex > 2){
-    // Neem tot plaats MINUS straatnaam (2 woorden voor plaats = straat + plaats)
-    var typeEndIndex = Math.max(2, plaatsIndex - 2);
-    var typeWords = allWords.slice(0, typeEndIndex);
-    
-    // Als eerst woord BR en tweede BRAND, skip BRAND (dubbel)
-    if(typeWords[0].toUpperCase() === 'BR' && typeWords[1] && typeWords[1].toUpperCase() === 'BRAND'){
-      typeWords = typeWords.slice(0, 1).concat(typeWords.slice(2));  // Skip index 1 (BRAND)
-    }
-    
-    type = typeWords.join(' ');
-    addr = allWords.slice(typeEndIndex).join(' ');
-  } else if(plaatsIndex > 1){
-    // Plaats gevonden - zorg voor minstens 2 woorden type (straatnaam + plaats)
-    var typeEndIndex = Math.max(plaatsIndex - 2, 2);
-    type = allWords.slice(0, typeEndIndex).join(' ');
-    addr = allWords.slice(typeEndIndex).join(' ');
-  } else if(plaatsIndex === 1){
-    // Plaats is woord 2
-    type = allWords[0];
-    addr = allWords.slice(1).join(' ');
-  } else {
-    // Fallback
-    type = allWords[0];
-    addr = allWords.slice(1).join(' ');
-  }
-  if(extras.length) type = type + ' (' + extras.join(', ') + ')';
+  var type = allWords.slice(0, typeEndIndex).join(' ');
+  var addr = allWords.slice(typeEndIndex).join(' ');
   
-  // Pas schrijfUit toe op type (BR→Brand etc)
+  // Dedupe extras
+  extras = extras.filter(function(v, i, a) { 
+    return a.indexOf(v) === i;
+  });
+  
+  // Extras toevoegen - EENMALIG
+  if(extras.length) {
+    var extraStr = extras.join(', ')
+      .replace(/\bGR\.?\b/gi, 'Grote')
+      .replace(/\bMIDDEL\b/gi, 'Middel')
+      .replace(/\bBR\b/gi, 'Brand')
+      .replace(/\bHV\.?\b/gi, 'Hulpverlening')
+      .replace(/\bKL\.?\b/gi, 'Klein')
+      .replace(/\bAMBU\b/gi, 'Ambulance')
+      .replace(/\s+/g, ' ')
+      .toLowerCase();
+    type = type + ' (' + extraStr + ')';
+  }
+  
+  // schrijfUit - EENMALIG
   type = schrijfUit(type);
   
   // 3) Controleer of addr een lokale locatienaam bevat (LOCATIES_CONFIG)
