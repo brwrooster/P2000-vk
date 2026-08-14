@@ -2050,6 +2050,9 @@ function parseP2000(raw){
     if(inhoud && inhoud.trim()) extras.push(inhoud.trim());
     return ' ';
   }).replace(/\s+/g,' ').trim();
+  
+  // Vervang slashes door spaties (BERM/BOSSCHAGE → BERM BOSSCHAGE)
+  cleanMid = cleanMid.replace(/\//g, ' ').replace(/\s+/g, ' ').trim();
 
   // PARSE VAN cleanMid
   var allWords = cleanMid.split(/\s+/);
