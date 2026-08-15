@@ -1600,11 +1600,13 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal){
   }
   
   // Als de locatie bekend is, toon die meteen
-  if(knownGeo){
-    // NIET overschrijven! Adres blijft origineel (bv. "A6 53,6 Rechts Almere")
-    // document.getElementById('incidentStreet').textContent=knownGeo.label;
+  var isHighway = addr && addr.match(/^[AN]\d/);
+  
+  if(knownGeo && !isHighway){  // Skip knownGeo voor snelwegen!
+    // Voor normale adressen: gebruik knownGeo
+    document.getElementById('incidentStreet').textContent=knownGeo.label;
     document.getElementById('incidentPlace').textContent='Almere';
-    lastAddr=addr;  // ← Origineel adres behouden
+    lastAddr=addr;
     initMap({lat:knownGeo.lat,lon:knownGeo.lon});
     loadRoute({lat:knownGeo.lat,lon:knownGeo.lon});
     loadUnitETAs(unitList,{lat:knownGeo.lat,lon:knownGeo.lon});
