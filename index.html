@@ -1611,6 +1611,10 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal){
     // ANDERS: Standaard geocoding via PDOK
     // kandidaten opbouwen: meer context = betere straat-treffer
     var cand=[];
+    
+    // EERST: Originele adres proberen (dus "A6 53,6 Rechts Almere" blijft intact!)
+    cand.push({ q: (addr||''), type: 'address' });
+    
     // hectometerpaal heeft voorrang (bv. "A6 102,7")
     var hmInfo = vindHectometer((geoHint||'') + ' ' + (addr||''));
     if(hmInfo){
