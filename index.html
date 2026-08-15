@@ -1600,7 +1600,7 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal){
   }
   
   // Als de locatie bekend is, toon die meteen
-  var isHighway = addr && addr.match(/^[AN]\d/);
+  var isHighway = addr && addr.match(/[AN]\d/);  // Check OVERAL, niet alleen begin!
   
   if(knownGeo && !isHighway){  // Skip knownGeo voor snelwegen!
     // Voor normale adressen: gebruik knownGeo
