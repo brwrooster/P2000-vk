@@ -1379,8 +1379,8 @@ function geocodeNominatim(q){
 /* Hectometeraanduiding herkennen, bv. "A6 102,7" of "N307 - HANZEWEG 102,7 DRONTEN" */
 function vindHectometer(tekst){
   var t = (tekst||'').toUpperCase();
-  // Verwijder "A6 RECHTS -" en "N/A LINKS -" etc (eerste deel voor de hectometer)
-  t = t.replace(/\b[AN]\s?\d{1,3}\s+(RECHTS|LINKS|RECHTSBAAN|LINKSBAAN)\s*-\s*/g, '');
+  // Verwijder "A6 RECHTS -" en "N/A LINKS -" etc, maar behoud RECHTS/LINKS
+  t = t.replace(/\b[AN]\s?\d{1,3}\s+(RECHTS|LINKS|RECHTSBAAN|LINKSBAAN)\s*-\s*/g, '$1 ');
   // Verwijder nog steeds RECHTS/LINKS voor de zekerheid
   t = t.replace(/\b(RECHTS|LINKS|RECHTSBAAN|LINKSBAAN)\b/g, '');
   var weg = t.match(/\b([AN]\s?\d{1,3})\b/);
@@ -2035,7 +2035,7 @@ function parseP2000(raw){
     .replace(/\bP\s*[12]\b/i,'')
     .replace(/\d{6,7}/g,'')
     .replace(/\b[A-Za-z]{2,4}[-\s]?\d{1,2}\b/,'')   // meldkamer/regiocode
-    .replace(/\b[AN]\s?\d{1,3}\s+(RECHTS|LINKS|RECHTSBAAN|LINKSBAAN)\s*-\s*(?=[AN]\s?\d)/g, '')
+    .replace(/\b[AN]\s?\d{1,3}\s+(RECHTS|LINKS|RECHTSBAAN|LINKSBAAN)\s*-\s*(?=[AN]\s?\d)/g, '$1 ')
     .replace(/\s+/g,' ').trim();
   
   // SPLIT TYPE/ADDR HIER (voor schrijfUit filteren!)
