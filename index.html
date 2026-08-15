@@ -1665,9 +1665,14 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal){
         // label opsplitsen in straat / plaats waar mogelijk
         var street=geo.label.split(',')[0];
         var place=geo.label.split(',').slice(1).join(',').trim()||'Almere';
-        document.getElementById('incidentStreet').textContent=street;
+        
+        // Voor snelwegen: adres NIET veranderen (blijft "A6 53,6 Almere")
+        if(!lastAddr.match(/[AN]\d/)){
+          document.getElementById('incidentStreet').textContent=street;
+        }
+        
         document.getElementById('incidentPlace').textContent=place;
-        lastAddr=street+', '+place;
+        lastAddr=lastAddr.match(/[AN]\d/) ? lastAddr : (street+', '+place);  // Snelweg behouden
         initMap({lat:geo.lat,lon:geo.lon});
         loadRoute({lat:geo.lat,lon:geo.lon});
         loadUnitETAs(unitList,{lat:geo.lat,lon:geo.lon});
@@ -2029,6 +2034,8 @@ function parseP2000(raw){
     'TANKER', 'AANHANGER', 'BUSJE', 'BESTELWAGEN', 'MINIBUS', 'TOURINGCAR',
     'ZIEKENAUTO', 'VOERTUIG', 'VOERTUIGEN', 'PERSONEN', 'GOEDEREN',
     'WEGVERVOER',
+    // Locatie-termen
+    'BUITEN', 'BINNEN', 'BUITENAREA', 'BUITENRUIMTE',
     // Medische/Emergency termen
     'REANIMATIE', 'HARTAANVAL', 'BEKNELLING', 'VERLOSSING', 'STUIPING',
     'VERGIFTIGING', 'VERBRANDING', 'OOGLETSEL', 'VERWONDING', 'VALLETJE',
