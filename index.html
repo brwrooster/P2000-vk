@@ -1601,9 +1601,10 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal){
   
   // Als de locatie bekend is, toon die meteen
   if(knownGeo){
-    document.getElementById('incidentStreet').textContent=knownGeo.label;
+    // NIET overschrijven! Adres blijft origineel (bv. "A6 53,6 Rechts Almere")
+    // document.getElementById('incidentStreet').textContent=knownGeo.label;
     document.getElementById('incidentPlace').textContent='Almere';
-    lastAddr=knownGeo.label;
+    lastAddr=addr;  // ← Origineel adres behouden
     initMap({lat:knownGeo.lat,lon:knownGeo.lon});
     loadRoute({lat:knownGeo.lat,lon:knownGeo.lon});
     loadUnitETAs(unitList,{lat:knownGeo.lat,lon:knownGeo.lon});
