@@ -1216,10 +1216,9 @@ function pollFeed(){
         
         // Controleer of we deze bronId al hebben gelogd (voorkomen duplicates)
         if(!laatstGeloefdeBronIds[m.id]){
-          showAlarm(p.type, p.addr, p.prio, p.units, HOLD_MIN*60*1000, p.mid, p.kanaal);
-          meldFeedVoorTelling(p.raw, m.id);  // Alleen tellen bij EERSTE keer!
-          // Log naar server
-          var meldingtekst = p.type + ' ' + p.addr;
+          showAlarm(p.type, p.addr, p.prio, p.units, HOLD_MIN*60*1000, p.mid, p.kanaal, p.originalText);
+          // Log naar server - ORIGINELE MELDING (met voertuignummers!)
+          var meldingtekst = p.originalText || p.raw || (p.type + ' ' + p.addr);  // Fallback if missing
           fetch('/api/pi', {
             method: 'POST',
             headers: {'content-type': 'application/json'},
@@ -1267,7 +1266,7 @@ function pollEigenOntvanger(){
     if(eersteP2000Poll && leeftijd > 20*60*1000){ eersteP2000Poll = false; return; }
     eersteP2000Poll = false;
     var p = parseP2000(d.text);
-    showAlarm(p.type, p.addr, p.prio, p.units, HOLD_MIN*60*1000, p.mid, p.kanaal);
+    showAlarm(p.type, p.addr, p.prio, p.units, HOLD_MIN*60*1000, p.mid, p.kanaal, p.originalText);
   }).catch(function(){ /* eigen ontvanger niet bereikbaar: feed blijft draaien */ });
 }
 setInterval(pollEigenOntvanger, 2000);
@@ -1548,7 +1547,7 @@ window.addEventListener('resize',function(){
     fitIncident(document.getElementById('incidentType').textContent);
   }
 });
-function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal){
+function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText){
   var screen=document.getElementById('screen');
   selectedPrio=prio;
   screen.classList.remove('prio-1','prio-2');
@@ -2011,6 +2010,9 @@ function schrijfUit(t){
     .replace(/\s+/g,' ').trim();
 }
 function parseP2000(raw){
+  // SAVE ORIGINEEL BERICHT (MET ALLES!)
+  var originalText = (raw||'').replace(/\s+/g,' ').trim();
+  
   var s=(raw||'').replace(/\s+/g,' ').trim();
   var pm=s.match(/\bP\s*([12])\b/i) || s.match(/\bPRIO\s*([12])\b/i);
   var prio=pm?parseInt(pm[1],10):selectedPrio;
@@ -2021,27 +2023,58 @@ function parseP2000(raw){
   
   // SUBTYPES - ALTIJD BESCHIKBAAR!
   var SUBTYPES = [
-    // Types
-    'SCHEEPVAART', 'WONING', 'AUTO', 'BOERDERIJ', 'INDUSTRIE', 'GEBOUW', 
-    'HUIS', 'GARAGE', 'LOODS', 'KANTOOR', 'WINKEL', 'BERM', 'BOSSCHAGE',
-    'AMBULANCE', 'ONGEVAL', 'BRAND', 'BR', 'ASSISTENTIE', 'DIER', 'WATER',
-    'VERKEERSONGEVAL', 'MEDISCHE', 'BUS', 'TREIN', 'FIETS', 'MOTOR',
-    'TRUCK', 'BRANDTRAP', 'BRANDKRAAN', 'ROOK', 'EXPLOSIE', 'LEKKAGE',
-    'OVERSTROMING', 'STORM', 'BOOM', 'WEGAFZETTING', 'VERLICHTING', 'KRAAN',
-    'AFVALCONTAINER', 'CONTAINER', 'ELEKTRICITEIT', 'TELEFOON', 'PIJP',
-    'BRANDEN', 'ZOEKING', 'ZOEKTOCHT', 'VERMIST', 'KINDERVERZORGING',
-    'BROMMER', 'SCHUUR', 'VRACHTAUTO', 'CAMPER', 'CARAVAN', 'VRACHTWAGEN',
-    'TANKER', 'AANHANGER', 'BUSJE', 'BESTELWAGEN', 'MINIBUS', 'TOURINGCAR',
-    'ZIEKENAUTO', 'VOERTUIG', 'VOERTUIGEN', 'PERSONEN', 'GOEDEREN',
-    'WEGVERVOER',
-    // Locatie-termen
-    'BUITEN', 'BINNEN', 'BUITENAREA', 'BUITENRUIMTE',
-    // Medische/Emergency termen
-    'REANIMATIE', 'HARTAANVAL', 'BEKNELLING', 'VERLOSSING', 'STUIPING',
-    'VERGIFTIGING', 'VERBRANDING', 'OOGLETSEL', 'VERWONDING', 'VALLETJE',
-    'ONWEL', 'FLAUWTE', 'BEVALLEN', 'ZIEKELIJKE', 'OMSTANDIGHEDEN',
-    'INSLEEP', 'INTRANSPORT', 'MEDISCHE', 'POLYTRAUMA', 'ERNSTIG',
-    // Connectoren
+    // BRAND/BRANDWEER
+    'BRAND', 'BR', 'BRANDTRAP', 'BRANDKRAAN', 'ROOK', 'BRANDEN', 'EXPLOSIE',
+    
+    // WONING/GEBOUWEN
+    'WONING', 'HUIS', 'GEBOUW', 'GARAGE', 'LOODS', 'KANTOOR', 'WINKEL', 'SCHUUR', 'BIJGEBOUW', 'BOERDERIJ', 'INDUSTRIE',
+    
+    // DIEREN
+    'DIER', 'WATER',
+    
+    // VOERTUIGEN
+    'AUTO', 'BUS', 'TREIN', 'FIETS', 'MOTOR', 'BROMMER', 'TRUCK', 'VRACHTAUTO', 'CAMPER', 'CARAVAN', 'VRACHTWAGEN', 'TANKER', 'AANHANGER', 'BUSJE', 'BESTELWAGEN', 'MINIBUS', 'TOURINGCAR', 'ZIEKENAUTO', 'WEGVERVOER',
+    
+    // VOERTUIG-GERELATEERD
+    'VOERTUIG', 'VOERTUIGEN', 'PERSONEN', 'GOEDEREN',
+    
+    // VERKEERS/ONGELUKKEN
+    'ONGEVAL', 'VERKEERSONGEVAL', 'BEKNELLING',
+    
+    // MEDISCHE/AMBULANCE
+    'AMBULANCE', 'MEDISCHE', 'REANIMATIE', 'HARTAANVAL', 'VERLOSSING', 'STUIPING', 'VERGIFTIGING', 'VERBRANDING', 'OOGLETSEL', 'VERWONDING', 'VALLETJE', 'ONWEL', 'FLAUWTE', 'BEVALLEN', 'ZIEKELIJKE', 'OMSTANDIGHEDEN', 'INSLEEP', 'INTRANSPORT', 'POLYTRAUMA', 'ERNSTIG', 'AFHIJSEN',
+    
+    // ASSISTENTIE
+    'ASSISTENTIE',
+    
+    // LEKKAGES/WATER
+    'LEKKAGE', 'OVERSTROMING',
+    
+    // NATUUR/STORMEN
+    'STORM', 'BOOM',
+    
+    // BRAND-SOORTEN
+    'RIET', 'ELEKTRAKAST',
+    
+    // BEHEERSSYSTEMEN
+    'OMS', 'BEHEERSSYSTEEM', 'DETECTIE', 'SPRINKLER', 'NABLUSSEN', 'NACONTROLE',
+    
+    // STANK/OVERLAST
+    'STANK', 'HINDERING', 'LUCHT', 'GASLUCHT',
+    
+    // LOCATIE/SITUATIE
+    'BUITEN', 'BINNEN', 'BUITENAREA', 'BUITENRUIMTE', 'ZEER', 'HOOG', 'KLEIN', 'KLEINE', 'MIDDEL', 'LICHTE', 'UITBR',
+    
+    // OPERATIONEEL
+    'HERBEZET', 'KAZERNEREN', 'HERBEZETTING', 'DIENSTVERLENING', 'INTREKKEN', 'ALARM',
+    
+    // TEAMS/SPECIALS
+    'TEAM', 'DIGITALE', 'VERKENNING', 'VE',
+    
+    // DIER IN PROBLEMEN
+    'PROBLEMEN',
+    
+    // CONNECTOREN
     'TE', 'NAAR', 'VAN', 'IN', 'OP', 'BIJ', 'AAN'
   ];
   var mid=s
@@ -2126,14 +2159,14 @@ function parseP2000(raw){
     }
   }
   
-  return { prio:prio, type:type, addr:addr, units:caps.join(' '), mid:mid, kanaal:kanaal, coord:knownCoord };
+  return { prio:prio, type:type, addr:addr, units:caps.join(' '), mid:mid, kanaal:kanaal, coord:knownCoord, originalText:originalText };
 }
 document.getElementById('fireBtn').onclick=function(){
   var raw=document.getElementById('fRaw').value.trim();
   if(!raw){document.getElementById('fRaw').focus();return;}
   var p=parseP2000(raw);
   panel.classList.remove('open');
-  showAlarm(p.type,p.addr,p.prio,p.units,undefined,p.mid,p.kanaal);
+  showAlarm(p.type,p.addr,p.prio,p.units,undefined,p.mid,p.kanaal,p.originalText);
 };
 
 /* Melding naar alle schermen sturen (via de Worker, net als de eigen ontvanger) */
