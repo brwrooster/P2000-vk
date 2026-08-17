@@ -2054,7 +2054,7 @@ function parseP2000(raw){
     'STORM', 'BOOM',
     
     // BRAND-SOORTEN
-    'RIET', 'ELEKTRAKAST',
+    'RIET', 'ELEKTRAKAST', 'CONTAINER',
     
     // BEHEERSSYSTEMEN
     'OMS', 'BEHEERSSYSTEEM', 'DETECTIE', 'SPRINKLER', 'NABLUSSEN', 'NACONTROLE',
@@ -2063,7 +2063,7 @@ function parseP2000(raw){
     'STANK', 'HINDERING', 'LUCHT', 'GASLUCHT',
     
     // LOCATIE/SITUATIE
-    'BUITEN', 'BINNEN', 'BUITENAREA', 'BUITENRUIMTE', 'ZEER', 'HOOG', 'KLEIN', 'KLEINE', 'MIDDEL', 'LICHTE', 'UITBR',
+    'BUITEN', 'BINNEN', 'BUITENAREA', 'BUITENRUIMTE', 'ONDERGRONDS', 'BOVENGRONDS', 'ZEER', 'HOOG', 'KLEIN', 'KLEINE', 'MIDDEL', 'LICHTE', 'UITBR',
     
     // OPERATIONEEL
     'HERBEZET', 'KAZERNEREN', 'HERBEZETTING', 'DIENSTVERLENING', 'INTREKKEN', 'ALARM',
@@ -2195,100 +2195,28 @@ document.getElementById('allesBtn').onclick=function(){
 };
 document.getElementById('clearBtn').onclick=function(){ panel.classList.remove('open'); clearAlarm(); };
 </script>
+
+<!-- ===== Text Fitting (CLEAN & SINGLE VERSION) ===== -->
 <script>
 function fitMeldingText() {
   var lastRun = document.querySelector('.last-run');
-  if(!lastRun) return;
-  
-  var maxHeight = 0.25 * window.innerHeight; // 25vh
-  lastRun.style.fontSize = '0.7rem';
-  
-  // Check if text overflows
-  if(lastRun.scrollHeight > maxHeight) {
-    var fontSize = 0.7;
-    while(lastRun.scrollHeight > maxHeight && fontSize > 0.4) {
-      fontSize -= 0.05;
-      lastRun.style.fontSize = fontSize + 'rem';
-    }
-  }
-}
-
-// Run on load and when content changes
-fitMeldingText();
-setInterval(fitMeldingText, 2000);
-</script><script>
-function fitMeldingText() {
-  var lastRun = document.querySelector('.last-run');
   if(!lastRun || !lastRun.innerHTML.trim()) return;
   
-  var maxHeight = 0.35 * window.innerHeight; // 35vh
-  var fontSize = 0.7;
-  
-  lastRun.style.fontSize = fontSize + 'rem';
-  
-  // Shrink if needed
-  var attempts = 0;
-  while(lastRun.scrollHeight > maxHeight && fontSize > 0.35 && attempts < 10) {
-    fontSize -= 0.05;
-    lastRun.style.fontSize = fontSize + 'rem';
-    attempts++;
-  }
-}
-
-// Run immediately and on interval
-fitMeldingText();
-setInterval(fitMeldingText, 1000);
-
-// Also run when page loads
-window.addEventListener('load', fitMeldingText);
-</script><script>
-function fitMeldingText() {
-  var lastRun = document.querySelector('.last-run');
-  if(!lastRun || !lastRun.innerHTML.trim()) return;
-  
-  // Kleinere max-height op tablet (> 800px)
-  var screenWidth = window.innerWidth;
-  var maxHeight;
-  if(screenWidth > 800) {
-    maxHeight = 0.25 * window.innerHeight; // Tablet: 25vh
-  } else {
-    maxHeight = 0.35 * window.innerHeight; // iPhone: 35vh
-  }
-  
-  var fontSize = 0.7;
-  lastRun.style.fontSize = fontSize + 'rem';
-  
-  // Agressief krimpen als nodig
-  var attempts = 0;
-  while(lastRun.scrollHeight > maxHeight && fontSize > 0.3 && attempts < 15) {
-    fontSize -= 0.05;
-    lastRun.style.fontSize = fontSize + 'rem';
-    attempts++;
-  }
-}
-
-fitMeldingText();
-setInterval(fitMeldingText, 500); // Sneller checken
-window.addEventListener('load', fitMeldingText);
-window.addEventListener('resize', fitMeldingText);
-</script><script>
-function fitMeldingText() {
-  var lastRun = document.querySelector('.last-run');
-  if(!lastRun || !lastRun.innerHTML.trim()) return;
-  
+  // Responsive heights: tablet vs mobile
   var screenWidth = window.innerWidth;
   var maxHeight;
   if(screenWidth > 800) {
     maxHeight = 0.4 * window.innerHeight; // Tablet: 40vh
   } else {
-    maxHeight = 0.45 * window.innerHeight; // iPhone: 45vh
+    maxHeight = 0.45 * window.innerHeight; // Mobile: 45vh
   }
   
+  // Start with good font size
   var fontSize = 0.65;
   lastRun.style.fontSize = fontSize + 'rem';
   lastRun.style.lineHeight = '1';
   
-  // Veel agressiever krimpen
+  // Shrink aggressively if needed
   var attempts = 0;
   while(lastRun.scrollHeight > maxHeight && fontSize > 0.25 && attempts < 20) {
     fontSize -= 0.03;
@@ -2297,8 +2225,13 @@ function fitMeldingText() {
   }
 }
 
+// Initialize on load
 fitMeldingText();
+
+// Re-fit on interval (checks every 500ms for content changes)
 setInterval(fitMeldingText, 500);
+
+// Re-fit on window resize
 window.addEventListener('load', fitMeldingText);
 window.addEventListener('resize', fitMeldingText);
 </script></body>
