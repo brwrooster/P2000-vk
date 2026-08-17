@@ -1307,7 +1307,33 @@ function geocodePDOK(q){
     if(!lat || !lon) return null;
     
     var label = doc.weergavenaam || doc.id || '';
-    return { lon: lon, lat: lat, label: label || q };
+    var result = { lon: lon, lat: lat, label: label || q };
+    
+    // NIEUW: Reverse geocoding via Nominatim voor wijk-info!
+    var reverseUrl = 'https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lon + '&format=json&zoom=10&addressdetails=1';
+    
+    return fetch(reverseUrl).then(function(rr){ return rr.json(); }).then(function(reverseData){
+      // Voeg wijk-info toe aan result
+      if(reverseData && reverseData.address) {
+        var addr = reverseData.address;
+        
+        // WIJK/BUURT ophalen (OpenStreetMap kan dit "suburb" of "district" noemen)
+        var wijk = addr.suburb || addr.district || addr.borough || '';
+        
+        if(wijk) {
+          result.wijk = wijk;
+          // Update label met wijk
+          result.label = label + ', ' + wijk;
+        }
+      }
+      
+      return result;
+    }).catch(function(err){
+      console.log('Reverse geocode warning:', err);
+      // Als reverse failte, return gewoon het PDOK-resultaat
+      return result;
+    });
+    
   }).catch(function(err){ 
     console.error('PDOK geocode error:', err);
     return null; 
@@ -1667,7 +1693,12 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
         
         // Voor snelwegen: adres NIET veranderen (blijft "A6 53,6 Almere")
         if(!lastAddr.match(/[AN]\d/)){
-          document.getElementById('incidentStreet').textContent=street;
+          // Als wijk beschikbaar van reverse geocoding: voeg toe!
+          if(geo.wijk) {
+            document.getElementById('incidentStreet').textContent = street + ', ' + geo.wijk;
+          } else {
+            document.getElementById('incidentStreet').textContent = street;
+          }
         }
         
         document.getElementById('incidentPlace').textContent=place;
