@@ -1775,7 +1775,9 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
         loadRoute({lat:geo.lat,lon:geo.lon});
         loadUnitETAs(unitList,{lat:geo.lat,lon:geo.lon});
       }else{
-        document.getElementById('incidentPlace').textContent='Locatie niet gevonden';
+        // FALLBACK: Toon origineel adres (NIET "Locatie niet gevonden"!)
+        document.getElementById('incidentStreet').textContent = addr || 'Locatie onbekend';
+        document.getElementById('incidentPlace').textContent = 'Almere';  // Fallback stad
         document.getElementById('routeTime').textContent='n.b.';
         document.getElementById('routeDist').textContent='n.b.';
         document.getElementById('routeBadge').classList.remove('loading');
