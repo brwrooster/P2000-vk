@@ -2294,6 +2294,9 @@ function parseP2000(raw){
     // DIER IN PROBLEMEN
     'PROBLEMEN',
     
+    // ORGANISATIE/GEBOUW-TYPES (FILTER UIT ADRES!)
+    'GEZONDHEIDSZORG', 'ZIEKENHUIS', 'KLINIEK', 'LOCATIE', 'LOC', 'SCHOOL', 'KANTOOR', 'FABRIEK', 'FABR', 'BEDRIJF', 'BEDRIJVEN', 'CENTRUM', 'GGZ', 'POLITIE', 'GEMEENTEHUIS', 'LIBRARY', 'BIBLIOTHEEK', 'CULTUREEL', 'CULTUUR', 'MUSEUM', 'THEATER', 'RESTAURANT', 'CAFE', 'HOTEL', 'CAMPING', 'PARKEERGARAGE',
+    
     // CONNECTOREN
     'TE', 'NAAR', 'VAN', 'IN', 'OP', 'BIJ', 'AAN'
   ];
@@ -2343,6 +2346,36 @@ function parseP2000(raw){
   
   var type = allWords.slice(0, typeEndIndex).join(' ');
   var addr = allWords.slice(typeEndIndex).join(' ');
+  
+  // SCHOON ADRES: Verwijder organisatie/locatie-woorden VOOR het echte adres
+  // Dit voorkomt dat "GGZ Centraal loc. kliniek 1 Boomgaardweg" alles als adres wordt gezien
+  var addrWords = addr.split(/\s+/);
+  var addrCleanedWords = [];
+  var foundStreet = false;  // Markers voor straatnamen
+  var organizationWords = ['CENTRAAL', 'LOCATIE', 'LOC', 'KLINIEK', 'SCHOOL', 'KANTOOR', 'FABRIEK', 'FABR', 'BEDRIJF', 'CENTRUM', 'GGZ', 'POLITIE', 'GEMEENTEHUIS', 'LIBRARY', 'BIBLIOTHEEK', 'KULTUREEL', 'MUSEUM', 'THEATER', 'RESTAURANT', 'CAFE', 'HOTEL', 'CAMPING', 'PARKEERGARAGE'];
+  
+  for(var ai = 0; ai < addrWords.length; ai++){
+    var w = addrWords[ai];
+    var wUpper = w.toUpperCase();
+    
+    // Check of dit woord een straatnaam indicator is (eindigt op -weg, -straat, -laan, etc)
+    if(w.match(/^[A-Za-z]+.*?(weg|straat|laan|pad|dorp|plein|singel|gracht|brug|steeg|gang|kade|kaai)$/i)){
+      foundStreet = true;
+    }
+    
+    // Voeg woord toe als:
+    // 1. We hebben al een straat gevonden (dan alles daarna)
+    // 2. Het is GEEN organisatie-woord
+    if(foundStreet || organizationWords.indexOf(wUpper) === -1){
+      addrCleanedWords.push(w);
+      foundStreet = true;
+    }
+  }
+  
+  addr = addrCleanedWords.join(' ').trim();
+  
+  // Fallback: als niets overblijft, gebruik origineel (minus type)
+  if(!addr) addr = allWords.slice(typeEndIndex).join(' ');
   
   // Dedupe extras
   extras = extras.filter(function(v, i, a) { 
