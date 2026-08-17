@@ -1281,17 +1281,50 @@ function geocode(q, type, verwacht){
 /* PDOK Locatieserver - veel beter voor hectometerpalen */
 /* Nominatim fallback */
 function geocodePDOK(q){
-  // NOMINATIM with FALLBACK STRATEGIES - Never return "Unknown"!
+  // NATIONWIDE COVERAGE - Handles all of Netherlands!
+  // Smart detection: cities → provinces → entire country
+  
   var explicitPlaats = null;
-  var plaatsen = ['almere', 'amsterdam', 'rotterdam', 'den haag', 'utrecht', 'arnhem', 'nijmegen', 'leiden', 'haarlem', 'lelystad', 'dronten', 'zeewolde', 'emmeloord', 'marknesse', 'naarden'];
+  var plaatsen = ['almere', 'amsterdam', 'rotterdam', 'den haag', 'utrecht', 'arnhem', 'nijmegen', 'leiden', 'haarlem', 'lelystad', 'dronten', 'zeewolde', 'emmeloord', 'marknesse', 'naarden', 'hoorn', 'groningen', 'leeuwarden', 'zwolle', 'kampen', 'deventer', 'apeldoorn', 'tilburg', 'breda', 'eindhoven', 'maastricht', 'heerlen', 'roermond', 'venlo', 'alkmaar', 'schagen', 'enkhuizen', 'volendam', 'edam', 'medemblik', 'meppel', 'assen', 'harlingen', 'sneek', 'workum', 'bolsward', 'franeker', 'dokkum', 'delft', 'zierikzee', 'middelburg', 'flushing', 'goes', 'vlissingen', 'wageningen', 'zevenaar', 'duiven', 'doetinchem', 'zutphen', 'winterswijk', 'lochem', 'groenlo', 'lichtenvoorde', 'nunspeet', 'harderwijk', 'barneveld', 'wezep'];
+  
+  // PROVINCIES met viewbox
+  var provincies = {
+    'groningen': '6.30,53.10,7.30,53.50',
+    'friesland': '5.40,53.00,6.30,53.50',
+    'drenthe': '6.30,52.70,7.30,53.20',
+    'overijssel': '6.00,52.15,7.10,52.95',
+    'flevoland': '5.00,52.30,6.00,52.90',
+    'gelderland': '5.60,51.80,6.70,52.50',
+    'utrecht': '4.90,51.95,5.50,52.35',
+    'noord-holland': '4.60,52.30,5.30,52.80',
+    'zuid-holland': '4.00,51.95,4.85,52.40',
+    'noord-brabant': '4.60,51.20,5.50,51.90',
+    'limburg': '5.60,50.70,6.30,51.40',
+    'zeeland': '3.35,51.25,4.40,51.85'
+  };
+  
   var qLower = q.toLowerCase();
+  
+  // Detecteer plaats
   for(var p=0; p<plaatsen.length; p++){
     if(qLower.indexOf(plaatsen[p]) !== -1){
       explicitPlaats = plaatsen[p];
       break;
     }
   }
-  if(!explicitPlaats) explicitPlaats = 'almere';
+  
+  // Als plaats niet gevonden, detecteer PROVINCIE
+  var explicitProvincie = null;
+  if(!explicitPlaats){
+    for(var prov in provincies){
+      if(qLower.indexOf(prov) !== -1){
+        explicitProvincie = prov;
+        break;
+      }
+    }
+  }
+  
+  // Bepaal viewbox
   var viewboxByPlace = {
     'almere': '5.10,52.25,5.45,52.50',
     'amsterdam': '4.75,52.25,5.10,52.45',
@@ -1307,32 +1340,91 @@ function geocodePDOK(q){
     'zeewolde': '5.30,52.35,5.50,52.50',
     'emmeloord': '5.75,52.65,5.95,52.80',
     'marknesse': '5.65,52.70,5.85,52.85',
-    'naarden': '5.15,52.28,5.35,52.38'
+    'naarden': '5.15,52.28,5.35,52.38',
+    'hoorn': '5.05,52.60,5.15,52.70',
+    'groningen': '6.50,53.15,6.60,53.25',
+    'leeuwarden': '5.75,53.15,5.85,53.25',
+    'zwolle': '6.05,52.50,6.15,52.60',
+    'kampen': '6.30,52.60,6.40,52.70',
+    'deventer': '6.15,52.25,6.25,52.35',
+    'apeldoorn': '6.00,52.15,6.10,52.25',
+    'tilburg': '5.05,51.50,5.15,51.60',
+    'breda': '4.75,51.55,4.85,51.65',
+    'eindhoven': '5.45,51.40,5.55,51.50',
+    'maastricht': '5.65,50.80,5.75,50.90',
+    'heerlen': '5.90,50.85,6.00,50.95',
+    'roermond': '5.95,51.15,6.05,51.25',
+    'venlo': '6.15,51.35,6.25,51.45',
+    'alkmaar': '4.75,52.60,4.85,52.70',
+    'schagen': '4.85,52.75,4.95,52.85',
+    'enkhuizen': '5.20,52.70,5.30,52.80',
+    'volendam': '5.05,52.65,5.15,52.75',
+    'edam': '4.95,52.55,5.05,52.65',
+    'medemblik': '5.15,52.75,5.25,52.85',
+    'meppel': '6.20,52.70,6.30,52.80',
+    'assen': '6.55,53.00,6.65,53.10',
+    'harlingen': '5.40,53.20,5.50,53.30',
+    'sneek': '5.65,53.05,5.75,53.15',
+    'workum': '5.45,52.95,5.55,53.05',
+    'bolsward': '5.55,53.00,5.65,53.10',
+    'franeker': '5.55,53.20,5.65,53.30',
+    'dokkum': '5.95,53.30,6.05,53.40',
+    'delft': '4.35,52.00,4.45,52.10',
+    'zierikzee': '4.00,51.75,4.10,51.85',
+    'middelburg': '3.60,51.50,3.70,51.60',
+    'flushing': '3.55,51.45,3.65,51.55',
+    'goes': '3.85,51.50,3.95,51.60',
+    'vlissingen': '3.45,51.40,3.55,51.50',
+    'wageningen': '5.65,51.95,5.75,52.05',
+    'zevenaar': '6.05,51.90,6.15,52.00',
+    'duiven': '6.00,51.85,6.10,51.95',
+    'doetinchem': '6.25,51.95,6.35,52.05',
+    'zutphen': '6.20,52.10,6.30,52.20',
+    'winterswijk': '6.70,52.10,6.80,52.20',
+    'lochem': '6.40,52.15,6.50,52.25',
+    'groenlo': '6.60,51.95,6.70,52.05',
+    'lichtenvoorde': '6.55,52.00,6.65,52.10',
+    'nunspeet': '5.80,52.30,5.90,52.40',
+    'harderwijk': '5.60,52.35,5.70,52.45',
+    'barneveld': '5.60,52.10,5.70,52.20',
+    'wezep': '6.00,52.40,6.10,52.50'
   };
-  var viewbox = viewboxByPlace[explicitPlaats] || '4.00,51.50,6.00,53.50';
+  
+  var viewbox = viewboxByPlace[explicitPlaats];
+  if(!viewbox && explicitProvincie) viewbox = provincies[explicitProvincie];
+  if(!viewbox) viewbox = '3.35,50.70,7.30,53.50'; // HEEL NEDERLAND!
+  
   function tryFullAddress(){
-    var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&addressdetails=1&limit=5&viewbox=' + viewbox + '&bounded=1&zoom=14';
+    var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) 
+      + '&format=json&addressdetails=1&limit=5&viewbox=' + viewbox + '&bounded=1&zoom=14';
+    
     return fetch(url).then(function(r){ return r.json(); }).then(function(results){
       if(!results || !results.length) return null;
       var bestResult = null;
       var bestScore = -1;
+      
       for(var i=0; i<results.length; i++){
         var result = results[i];
         if(!result || !result.lat || !result.lon) continue;
+        
         var addr = result.address || {};
         var lat = parseFloat(result.lat);
         var lon = parseFloat(result.lon);
         var score = 0;
         var street = addr.street || addr.road || '';
         var wijken = [];
+        
         if(addr.suburb) wijken.push(addr.suburb);
         if(addr.admin_level_10 && addr.admin_level_10 !== addr.suburb) wijken.push(addr.admin_level_10);
         if(addr.admin_level_9 && wijken.indexOf(addr.admin_level_9) === -1) wijken.push(addr.admin_level_9);
         if(addr.district && wijken.indexOf(addr.district) === -1) wijken.push(addr.district);
+        
         var city = addr.city || addr.town || addr.village || '';
+        
         score = wijken.length * 10;
         if(street) score += 5;
         if(city) score += 3;
+        
         if(score > bestScore){
           bestScore = score;
           bestResult = {
@@ -1348,14 +1440,20 @@ function geocodePDOK(q){
       return bestResult;
     });
   }
+  
   function tryPlaceOnly(){
     var plaats = q.split(/\s+/).pop();
     if(plaats === q) return Promise.resolve(null);
-    var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(plaats) + '&format=json&addressdetails=1&limit=1&viewbox=' + viewbox + '&bounded=1&zoom=10';
+    
+    var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(plaats) 
+      + '&format=json&addressdetails=1&limit=1&viewbox=' + viewbox + '&bounded=1&zoom=10';
+    
     return fetch(url).then(function(r){ return r.json(); }).then(function(results){
       if(!results || !results.length) return null;
+      
       var result = results[0];
       if(!result) return null;
+      
       return {
         lon: parseFloat(result.lon),
         lat: parseFloat(result.lat),
@@ -1366,6 +1464,7 @@ function geocodePDOK(q){
       };
     });
   }
+  
   function fallbackOriginal(){
     var plaats = q.split(/\s+/).pop();
     return Promise.resolve({
@@ -1374,22 +1473,22 @@ function geocodePDOK(q){
       street: q,
       wijken: [],
       wijk: '',
-      city: plaats || 'Onbekend'
+      city: plaats || 'Nederland'
     });
   }
+  
   return tryFullAddress()
     .then(function(result){
       if(result) return result;
-      console.log('Strategie 1 faalde, probeer Strategie 2...');
       return tryPlaceOnly();
     })
     .then(function(result){
       if(result) return result;
-      console.log('Strategie 2 faalde, gebruik Strategie 3 (origineel adres)...');
       return fallbackOriginal();
     })
     .then(function(bestResult){
       if(!bestResult) return null;
+      
       var label = bestResult.street;
       if(bestResult.wijken.length > 0) {
         label += ', ' + bestResult.wijken.join(', ');
@@ -1397,6 +1496,7 @@ function geocodePDOK(q){
       if(bestResult.city) {
         label += ', ' + bestResult.city;
       }
+      
       return {
         lon: bestResult.lon,
         lat: bestResult.lat,
@@ -1408,7 +1508,7 @@ function geocodePDOK(q){
       };
     })
     .catch(function(err){
-      console.error('Nominatim geocode error:', err);
+      console.error('Nominatim error:', err);
       var plaats = q.split(/\s+/).pop();
       return {
         lon: null,
@@ -1417,7 +1517,7 @@ function geocodePDOK(q){
         street: q,
         wijken: [],
         wijk: '',
-        city: plaats || 'Onbekend'
+        city: plaats || 'Nederland'
       };
     });
 }
@@ -1425,7 +1525,7 @@ function geocodePDOK(q){
 function geocodeNominatim(q){
   // Bepaal de plaats uit de query zelf (bijv. "ALMERE" uit "GRIENDENBRUG ALMERE")
   var explicitPlaats = null;
-  var plaatsen = ['almere', 'amsterdam', 'rotterdam', 'den haag', 'utrecht', 'kerkdriel', 'arnhem', 'nijmegen'];
+  var plaatsen = ['almere', 'amsterdam', 'rotterdam', 'den haag', 'utrecht', 'arnhem', 'nijmegen', 'leiden', 'haarlem', 'lelystad', 'dronten', 'zeewolde', 'emmeloord', 'marknesse', 'naarden', 'hoorn', 'groningen', 'leeuwarden', 'zwolle', 'kampen', 'deventer', 'apeldoorn', 'tilburg', 'breda', 'eindhoven', 'maastricht', 'heerlen', 'roermond', 'venlo', 'alkmaar', 'schagen', 'enkhuizen', 'volendam', 'edam', 'medemblik', 'meppel', 'assen', 'harlingen', 'sneek', 'workum', 'bolsward', 'franeker', 'dokkum', 'delft', 'zierikzee', 'middelburg', 'flushing', 'goes', 'vlissingen', 'wageningen', 'zevenaar', 'duiven', 'doetinchem', 'zutphen', 'winterswijk', 'lochem', 'groenlo', 'lichtenvoorde', 'nunspeet', 'harderwijk', 'barneveld', 'wezep'];
   var qLower = q.toLowerCase();
   for(var p=0; p<plaatsen.length; p++){
     if(qLower.indexOf(plaatsen[p]) !== -1){
