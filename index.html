@@ -1667,7 +1667,7 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
   if(knownGeo && !isHighway){  // Skip knownGeo voor snelwegen!
     // Voor normale adressen: gebruik knownGeo
     document.getElementById('incidentStreet').textContent=knownGeo.label;
-    document.getElementById('incidentPlace').textContent='Almere';
+    document.getElementById('incidentPlace').textContent='Almere';  // knownGeo is hardcoded Almere location
     lastAddr=addr;
     initMap({lat:knownGeo.lat,lon:knownGeo.lon});
     loadRoute({lat:knownGeo.lat,lon:knownGeo.lon});
@@ -1725,8 +1725,8 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
     tryGeocode(0).then(function(geo){
       if(geo){
         // label opsplitsen in straat / plaats waar mogelijk
-        var street=geo.label.split(',')[0];
-        var place=geo.label.split(',').slice(1).join(',').trim()||'Almere';
+        var street=geo.street||'';
+        var place=geo.city||'Onbekend';
         
         // Voor snelwegen: adres NIET veranderen (blijft "A6 53,6 Almere")
         if(!lastAddr.match(/[AN]\d/)){
@@ -1783,6 +1783,11 @@ document.getElementById('logoLink').onclick=function(){
 // S toets = instellingen
 document.addEventListener('keydown', function(e) {
   if((e.key === 's' || e.key === 'S') && !e.ctrlKey && !e.metaKey) {
+    // Check: ben ik aan het typen in een input/textarea?
+    var activeEl = document.activeElement;
+    if(activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA')) {
+      return;  // Ja, dus NIET naar instellingen gaan! ✅
+    }
     e.preventDefault();
     openCfg();
   }
