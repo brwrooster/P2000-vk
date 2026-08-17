@@ -1292,7 +1292,7 @@ function geocode(q, type, verwacht){
 
 /* PDOK Locatieserver - veel beter voor hectometerpalen */
 function geocodePDOK(q){
-  // NOMINATIM-ONLY approach (werkt overal, geeft compleet adres met wijk!)
+  // NOMINATIM-ONLY approach - optimized for neighborhood detection
   
   // Bepaal de plaats uit query en stel viewbox in
   var explicitPlaats = null;
@@ -1308,7 +1308,7 @@ function geocodePDOK(q){
   
   if(!explicitPlaats) explicitPlaats = 'almere'; // Default
   
-  // Viewbox per plaats voor nauwkeurigheid/snelheid
+  // Viewbox per plaats
   var viewboxByPlace = {
     'almere': '5.10,52.25,5.45,52.50',
     'amsterdam': '4.75,52.25,5.10,52.45',
@@ -1327,48 +1327,78 @@ function geocodePDOK(q){
     'naarden': '5.15,52.28,5.35,52.38'
   };
   
-  var viewbox = viewboxByPlace[explicitPlaats] || '4.00,51.50,6.00,53.50'; // NL fallback
+  var viewbox = viewboxByPlace[explicitPlaats] || '4.00,51.50,6.00,53.50';
   
-  // Nominatim search with detailed address (zoom=14 voor maximale detail)
+  // Query NOMINATIM voor 5 resultaten (niet 1!)
   var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) 
-    + '&format=json&addressdetails=1&limit=1&viewbox=' + viewbox + '&bounded=1&zoom=14';
+    + '&format=json&addressdetails=1&limit=5&viewbox=' + viewbox + '&bounded=1&zoom=14';
   
   return fetch(url).then(function(r){ return r.json(); }).then(function(results){
     if(!results || !results.length) return null;
     
-    var result = results[0];
-    if(!result || !result.lat || !result.lon) return null;
+    // Loop door resultaten en zoek BESTE met wijk-info
+    var bestResult = null;
+    var bestScore = -1;
     
-    var addr = result.address || {};
-    var lat = parseFloat(result.lat);
-    var lon = parseFloat(result.lon);
+    for(var i=0; i<results.length; i++){
+      var result = results[i];
+      if(!result || !result.lat || !result.lon) continue;
+      
+      var addr = result.address || {};
+      var lat = parseFloat(result.lat);
+      var lon = parseFloat(result.lon);
+      
+      // Score dit resultaat op basis van wijk-completeness
+      var score = 0;
+      var street = addr.street || addr.road || '';
+      var wijken = [];
+      
+      // Verzamel ALLE wijken/buurten
+      if(addr.suburb) wijken.push(addr.suburb);
+      if(addr.admin_level_10 && addr.admin_level_10 !== addr.suburb) wijken.push(addr.admin_level_10);
+      if(addr.admin_level_9 && wijken.indexOf(addr.admin_level_9) === -1) wijken.push(addr.admin_level_9);
+      if(addr.district && wijken.indexOf(addr.district) === -1) wijken.push(addr.district);
+      
+      var city = addr.city || addr.town || addr.village || '';
+      
+      // Score: meer wijken = beter
+      score = wijken.length * 10;
+      if(street) score += 5;
+      if(city) score += 3;
+      
+      // Kies beste
+      if(score > bestScore){
+        bestScore = score;
+        bestResult = {
+          lon: lon,
+          lat: lat,
+          street: street,
+          wijken: wijken,
+          wijk: wijken.length > 0 ? wijken[0] : '',  // Eerste/beste wijk
+          city: city
+        };
+      }
+    }
     
-    // Bouw compleet adres: "Straat, Wijk, Stad"
-    var street = addr.street || addr.road || '';
+    if(!bestResult) return null;
     
-    // WIJK OPHALEN - probeer verschillende levels (admin_level_9 is wijk in NL!)
-    var wijk = addr.admin_level_9      // Wijk (beste optie voor NL)
-            || addr.admin_level_10     // Deelwijk (fallback)
-            || addr.suburb             // Fallback
-            || addr.district           // Fallback
-            || addr.borough            // Fallback
-            || '';                     // Leeg als niets gevonden
-    
-    // Stad/gemeente
-    var city = addr.city || addr.town || addr.village || '';
-    
-    // Bouw label
-    var label = street;
-    if(wijk) label += ', ' + wijk;
-    if(city) label += ', ' + city;
+    // Bouw label: "Straat, Wijk1, Wijk2, Stad"
+    var label = bestResult.street;
+    if(bestResult.wijken.length > 0) {
+      label += ', ' + bestResult.wijken.join(', ');
+    }
+    if(bestResult.city) {
+      label += ', ' + bestResult.city;
+    }
     
     return {
-      lon: lon,
-      lat: lat,
+      lon: bestResult.lon,
+      lat: bestResult.lat,
       label: label || q,
-      street: street,
-      wijk: wijk,
-      city: city
+      street: bestResult.street,
+      wijken: bestResult.wijken,
+      wijk: bestResult.wijk,
+      city: bestResult.city
     };
     
   }).catch(function(err){
@@ -1730,16 +1760,17 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
         
         // Voor snelwegen: adres NIET veranderen (blijft "A6 53,6 Almere")
         if(!lastAddr.match(/[AN]\d/)){
-          // Als wijk beschikbaar van reverse geocoding: voeg toe!
-          if(geo.wijk) {
-            document.getElementById('incidentStreet').textContent = street + ', ' + geo.wijk;
+          // Als wijken beschikbaar: voeg toe!
+          if(geo.wijken && geo.wijken.length > 0) {
+            document.getElementById('incidentStreet').textContent = street + ', ' + geo.wijken.join(', ');
           } else {
             document.getElementById('incidentStreet').textContent = street;
           }
         }
         
         document.getElementById('incidentPlace').textContent=place;
-        lastAddr=lastAddr.match(/[AN]\d/) ? lastAddr : (street+', '+place);  // Snelweg behouden
+        var wijkStr = (geo.wijken && geo.wijken.length > 0) ? ', ' + geo.wijken.join(', ') : '';
+        lastAddr=lastAddr.match(/[AN]\d/) ? lastAddr : (street + wijkStr + ', ' + place);  // Snelweg behouden
         initMap({lat:geo.lat,lon:geo.lon});
         loadRoute({lat:geo.lat,lon:geo.lon});
         loadUnitETAs(unitList,{lat:geo.lat,lon:geo.lon});
@@ -2115,19 +2146,19 @@ function parseP2000(raw){
     'ONGEVAL', 'VERKEERSONGEVAL', 'BEKNELLING',
     
     // MEDISCHE/AMBULANCE
-    'AMBULANCE', 'MEDISCHE', 'REANIMATIE', 'HARTAANVAL', 'VERLOSSING', 'STUIPING', 'VERGIFTIGING', 'VERBRANDING', 'OOGLETSEL', 'VERWONDING', 'VALLETJE', 'ONWEL', 'FLAUWTE', 'BEVALLEN', 'ZIEKELIJKE', 'OMSTANDIGHEDEN', 'INSLEEP', 'INTRANSPORT', 'POLYTRAUMA', 'ERNSTIG', 'AFHIJSEN',
+    'AMBULANCE', 'AMBU', 'MEDISCHE', 'LETSEL', 'REANIMATIE', 'HARTAANVAL', 'VERLOSSING', 'STUIPING', 'VERGIFTIGING', 'VERBRANDING', 'OOGLETSEL', 'VERWONDING', 'VALLETJE', 'ONWEL', 'FLAUWTE', 'BEVALLEN', 'ZIEKELIJKE', 'OMSTANDIGHEDEN', 'INSLEEP', 'INTRANSPORT', 'POLYTRAUMA', 'ERNSTIG', 'AFHIJSEN',
     
     // ASSISTENTIE
     'ASSISTENTIE', 'BUITENSLUITING',
     
     // LEKKAGES/WATER
-    'LEKKAGE', 'OVERSTROMING',
+    'LEKKAGE', 'OVERSTROMING', 'WATEROVERLAST',
     
     // NATUUR/STORMEN
     'STORM', 'BOOM',
     
     // BRAND-SOORTEN
-    'RIET', 'ELEKTRAKAST', 'CONTAINER',
+    'RIET', 'ELEKTRAKAST', 'CONTAINER', 'BRANDGERUCHT',
     
     // BEHEERSSYSTEMEN
     'OMS', 'BEHEERSSYSTEEM', 'DETECTIE', 'SPRINKLER', 'NABLUSSEN', 'NACONTROLE',
