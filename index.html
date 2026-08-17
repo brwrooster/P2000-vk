@@ -2352,24 +2352,22 @@ function parseP2000(raw){
   var addrWords = addr.split(/\s+/);
   var addrCleanedWords = [];
   var foundStreet = false;  // Markers voor straatnamen
-  var organizationWords = ['CENTRAAL', 'LOCATIE', 'LOC', 'KLINIEK', 'SCHOOL', 'KANTOOR', 'FABRIEK', 'FABR', 'BEDRIJF', 'CENTRUM', 'GGZ', 'POLITIE', 'GEMEENTEHUIS', 'LIBRARY', 'BIBLIOTHEEK', 'KULTUREEL', 'MUSEUM', 'THEATER', 'RESTAURANT', 'CAFE', 'HOTEL', 'CAMPING', 'PARKEERGARAGE'];
   
   for(var ai = 0; ai < addrWords.length; ai++){
     var w = addrWords[ai];
-    var wUpper = w.toUpperCase();
     
     // Check of dit woord een straatnaam indicator is (eindigt op -weg, -straat, -laan, etc)
-    if(w.match(/^[A-Za-z]+.*?(weg|straat|laan|pad|dorp|plein|singel|gracht|brug|steeg|gang|kade|kaai)$/i)){
-      foundStreet = true;
-    }
+    var isStreetName = w.match(/^[A-Za-z]+.*?(weg|straat|laan|pad|dorp|plein|singel|gracht|brug|steeg|gang|kade|kaai)$/i);
     
-    // Voeg woord toe als:
-    // 1. We hebben al een straat gevonden (dan alles daarna)
-    // 2. Het is GEEN organisatie-woord
-    if(foundStreet || organizationWords.indexOf(wUpper) === -1){
-      addrCleanedWords.push(w);
+    if(isStreetName){
+      // GEVONDEN! Dit is een echte straatnaam - begin hier
       foundStreet = true;
+      addrCleanedWords.push(w);
+    } else if(foundStreet){
+      // We hebben al een straat gevonden - voeg ALLES toe wat daarna komt
+      addrCleanedWords.push(w);
     }
+    // Else: foundStreet=false en dit is geen straatnaam → SKIP dit woord!
   }
   
   addr = addrCleanedWords.join(' ').trim();
