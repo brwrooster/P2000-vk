@@ -1292,51 +1292,78 @@ function geocode(q, type, verwacht){
 
 /* PDOK Locatieserver - veel beter voor hectometerpalen */
 function geocodePDOK(q){
-  var url = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1/free?q=' + encodeURIComponent(q) + '&fq=*:*&rows=5';
+  // NOMINATIM-ONLY approach (werkt overal, geeft compleet adres met wijk!)
   
-  return fetch(url).then(function(r){ return r.json(); }).then(function(d){
-    if(!d || !d.response || !d.response.docs || !d.response.docs.length) return null;
+  // Bepaal de plaats uit query en stel viewbox in
+  var explicitPlaats = null;
+  var plaatsen = ['almere', 'amsterdam', 'rotterdam', 'den haag', 'utrecht', 'arnhem', 'nijmegen', 'leiden', 'haarlem', 'lelystad', 'dronten', 'zeewolde', 'emmeloord', 'marknesse', 'naarden'];
+  var qLower = q.toLowerCase();
+  
+  for(var p=0; p<plaatsen.length; p++){
+    if(qLower.indexOf(plaatsen[p]) !== -1){
+      explicitPlaats = plaatsen[p];
+      break;
+    }
+  }
+  
+  if(!explicitPlaats) explicitPlaats = 'almere'; // Default
+  
+  // Viewbox per plaats voor nauwkeurigheid/snelheid
+  var viewboxByPlace = {
+    'almere': '5.10,52.25,5.45,52.50',
+    'amsterdam': '4.75,52.25,5.10,52.45',
+    'rotterdam': '4.25,51.85,4.65,52.05',
+    'den haag': '4.00,52.00,4.35,52.20',
+    'utrecht': '5.10,52.05,5.30,52.15',
+    'arnhem': '5.80,51.95,6.10,52.15',
+    'nijmegen': '5.85,51.80,5.95,51.95',
+    'leiden': '4.45,52.10,4.55,52.20',
+    'haarlem': '4.60,52.35,4.75,52.45',
+    'lelystad': '5.45,52.45,5.65,52.60',
+    'dronten': '5.70,52.65,5.90,52.80',
+    'zeewolde': '5.30,52.35,5.50,52.50',
+    'emmeloord': '5.75,52.65,5.95,52.80',
+    'marknesse': '5.65,52.70,5.85,52.85',
+    'naarden': '5.15,52.28,5.35,52.38'
+  };
+  
+  var viewbox = viewboxByPlace[explicitPlaats] || '4.00,51.50,6.00,53.50'; // NL fallback
+  
+  // Nominatim search with detailed address
+  var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) 
+    + '&format=json&addressdetails=1&limit=1&viewbox=' + viewbox + '&bounded=1';
+  
+  return fetch(url).then(function(r){ return r.json(); }).then(function(results){
+    if(!results || !results.length) return null;
     
-    var doc = d.response.docs[0];
-    if(!doc) return null;
+    var result = results[0];
+    if(!result || !result.lat || !result.lon) return null;
     
-    // PDOK geeft RD coördinaten (X, Y), niet lat/lon
-    var lat = doc.centroide_ll ? doc.centroide_ll[1] : null;
-    var lon = doc.centroide_ll ? doc.centroide_ll[0] : null;
+    var addr = result.address || {};
+    var lat = parseFloat(result.lat);
+    var lon = parseFloat(result.lon);
     
-    if(!lat || !lon) return null;
+    // Bouw compleet adres: "Straat, Wijk, Stad"
+    var street = addr.street || addr.road || '';
+    var suburb = addr.suburb || addr.district || addr.borough || '';
+    var city = addr.city || addr.town || addr.village || '';
     
-    var label = doc.weergavenaam || doc.id || '';
-    var result = { lon: lon, lat: lat, label: label || q };
+    var label = street;
+    if(suburb) label += ', ' + suburb;
+    if(city) label += ', ' + city;
     
-    // NIEUW: Reverse geocoding via Nominatim voor wijk-info!
-    var reverseUrl = 'https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lon + '&format=json&zoom=10&addressdetails=1';
+    return {
+      lon: lon,
+      lat: lat,
+      label: label || q,
+      street: street,
+      wijk: suburb,
+      city: city
+    };
     
-    return fetch(reverseUrl).then(function(rr){ return rr.json(); }).then(function(reverseData){
-      // Voeg wijk-info toe aan result
-      if(reverseData && reverseData.address) {
-        var addr = reverseData.address;
-        
-        // WIJK/BUURT ophalen (OpenStreetMap kan dit "suburb" of "district" noemen)
-        var wijk = addr.suburb || addr.district || addr.borough || '';
-        
-        if(wijk) {
-          result.wijk = wijk;
-          // Update label met wijk
-          result.label = label + ', ' + wijk;
-        }
-      }
-      
-      return result;
-    }).catch(function(err){
-      console.log('Reverse geocode warning:', err);
-      // Als reverse failte, return gewoon het PDOK-resultaat
-      return result;
-    });
-    
-  }).catch(function(err){ 
-    console.error('PDOK geocode error:', err);
-    return null; 
+  }).catch(function(err){
+    console.error('Nominatim geocode error:', err);
+    return null;
   });
 }
 
