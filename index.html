@@ -218,8 +218,7 @@
 
   .alarm-body{flex:1;display:flex;min-height:0}
   .alarm-main{
-    flex:1;display:flex;flex-direction:column;justify-content:center;
-    gap:3vh;padding:4vw;min-width:0;
+    flex:1;display:flex;flex-direction:column;justify-content:flex-start;gap:2vh;padding:4vw;min-width:0;overflow:hidden;
   }
   .eyebrow{
     font-family:'Oswald',sans-serif;text-transform:uppercase;
@@ -2451,28 +2450,49 @@ document.getElementById('clearBtn').onclick=function(){ panel.classList.remove('
 <script>
 function fitMeldingText() {
   var lastRun = document.querySelector('.last-run');
+  var unitsSection = document.querySelector('.units');
+  
   if(!lastRun || !lastRun.innerHTML.trim()) return;
   
   // Responsive heights: tablet vs mobile
   var screenWidth = window.innerWidth;
   var maxHeight;
   if(screenWidth > 800) {
-    maxHeight = 0.4 * window.innerHeight; // Tablet: 40vh
+    maxHeight = 0.35 * window.innerHeight; // Tablet: 35vh (reduced to leave room for units)
   } else {
-    maxHeight = 0.45 * window.innerHeight; // Mobile: 45vh
+    maxHeight = 0.40 * window.innerHeight; // Mobile: 40vh (reduced)
   }
   
-  // Start with good font size
-  var fontSize = 0.65;
+  // Check tekst-lengte om initiële fontsize te bepalen
+  var textLength = lastRun.textContent.length;
+  var fontSize;
+  
+  if(textLength > 150) {
+    // VEEL TEKST - start klein
+    fontSize = 0.45;
+  } else if(textLength > 80) {
+    // GEMIDDELD - start normaal
+    fontSize = 0.55;
+  } else {
+    // KORT - start groot
+    fontSize = 0.65;
+  }
+  
   lastRun.style.fontSize = fontSize + 'rem';
   lastRun.style.lineHeight = '1';
   
-  // Shrink aggressively if needed
+  // Shrink agressively if needed
   var attempts = 0;
-  while(lastRun.scrollHeight > maxHeight && fontSize > 0.25 && attempts < 20) {
-    fontSize -= 0.03;
+  while(lastRun.scrollHeight > maxHeight && fontSize > 0.20 && attempts < 25) {
+    fontSize -= 0.04; // Meer agressief (was 0.03)
     lastRun.style.fontSize = fontSize + 'rem';
     attempts++;
+  }
+  
+  // UNITS ALTIJD ZICHTBAAR: zorg dat units nooit worden geklemd
+  if(unitsSection) {
+    unitsSection.style.flexShrink = '0';
+    unitsSection.style.marginTop = 'auto';
   }
 }
 
