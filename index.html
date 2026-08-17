@@ -1329,9 +1329,9 @@ function geocodePDOK(q){
   
   var viewbox = viewboxByPlace[explicitPlaats] || '4.00,51.50,6.00,53.50'; // NL fallback
   
-  // Nominatim search with detailed address
+  // Nominatim search with detailed address (zoom=14 voor maximale detail)
   var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) 
-    + '&format=json&addressdetails=1&limit=1&viewbox=' + viewbox + '&bounded=1';
+    + '&format=json&addressdetails=1&limit=1&viewbox=' + viewbox + '&bounded=1&zoom=14';
   
   return fetch(url).then(function(r){ return r.json(); }).then(function(results){
     if(!results || !results.length) return null;
@@ -1345,11 +1345,21 @@ function geocodePDOK(q){
     
     // Bouw compleet adres: "Straat, Wijk, Stad"
     var street = addr.street || addr.road || '';
-    var suburb = addr.suburb || addr.district || addr.borough || '';
+    
+    // WIJK OPHALEN - probeer verschillende levels (admin_level_9 is wijk in NL!)
+    var wijk = addr.admin_level_9      // Wijk (beste optie voor NL)
+            || addr.admin_level_10     // Deelwijk (fallback)
+            || addr.suburb             // Fallback
+            || addr.district           // Fallback
+            || addr.borough            // Fallback
+            || '';                     // Leeg als niets gevonden
+    
+    // Stad/gemeente
     var city = addr.city || addr.town || addr.village || '';
     
+    // Bouw label
     var label = street;
-    if(suburb) label += ', ' + suburb;
+    if(wijk) label += ', ' + wijk;
     if(city) label += ', ' + city;
     
     return {
@@ -1357,7 +1367,7 @@ function geocodePDOK(q){
       lat: lat,
       label: label || q,
       street: street,
-      wijk: suburb,
+      wijk: wijk,
       city: city
     };
     
