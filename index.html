@@ -1274,41 +1274,24 @@ pollEigenOntvanger();
 
 /* ================= Geocoding (PDOK Locatieserver) ================= */
 function geocode(q, type, verwacht){
-  // Voor hectometerpalen: eerst PDOK proberen
-  if(type === 'hectometerpaal'){
-    return geocodePDOK(q).then(function(result){
-      if(result) return result;
-      // PDOK werkte niet -> fallback naar Nominatim
-      return geocodeNominatim(q);
-    }).catch(function(){ 
-      // Error -> fallback naar Nominatim
-      return geocodeNominatim(q);
-    });
-  }
-  
-  // Voor andere types: Nominatim
-  return geocodeNominatim(q);
+  // Always use geocodePDOK with fallback strategies - NEVER return unknown!
+  return geocodePDOK(q);
 }
 
 /* PDOK Locatieserver - veel beter voor hectometerpalen */
+/* Nominatim fallback */
 function geocodePDOK(q){
-  // NOMINATIM-ONLY approach - optimized for neighborhood detection
-  
-  // Bepaal de plaats uit query en stel viewbox in
+  // NOMINATIM with FALLBACK STRATEGIES - Never return "Unknown"!
   var explicitPlaats = null;
   var plaatsen = ['almere', 'amsterdam', 'rotterdam', 'den haag', 'utrecht', 'arnhem', 'nijmegen', 'leiden', 'haarlem', 'lelystad', 'dronten', 'zeewolde', 'emmeloord', 'marknesse', 'naarden'];
   var qLower = q.toLowerCase();
-  
   for(var p=0; p<plaatsen.length; p++){
     if(qLower.indexOf(plaatsen[p]) !== -1){
       explicitPlaats = plaatsen[p];
       break;
     }
   }
-  
-  if(!explicitPlaats) explicitPlaats = 'almere'; // Default
-  
-  // Viewbox per plaats
+  if(!explicitPlaats) explicitPlaats = 'almere';
   var viewboxByPlace = {
     'almere': '5.10,52.25,5.45,52.50',
     'amsterdam': '4.75,52.25,5.10,52.45',
@@ -1326,88 +1309,119 @@ function geocodePDOK(q){
     'marknesse': '5.65,52.70,5.85,52.85',
     'naarden': '5.15,52.28,5.35,52.38'
   };
-  
   var viewbox = viewboxByPlace[explicitPlaats] || '4.00,51.50,6.00,53.50';
-  
-  // Query NOMINATIM voor 5 resultaten (niet 1!)
-  var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) 
-    + '&format=json&addressdetails=1&limit=5&viewbox=' + viewbox + '&bounded=1&zoom=14';
-  
-  return fetch(url).then(function(r){ return r.json(); }).then(function(results){
-    if(!results || !results.length) return null;
-    
-    // Loop door resultaten en zoek BESTE met wijk-info
-    var bestResult = null;
-    var bestScore = -1;
-    
-    for(var i=0; i<results.length; i++){
-      var result = results[i];
-      if(!result || !result.lat || !result.lon) continue;
-      
-      var addr = result.address || {};
-      var lat = parseFloat(result.lat);
-      var lon = parseFloat(result.lon);
-      
-      // Score dit resultaat op basis van wijk-completeness
-      var score = 0;
-      var street = addr.street || addr.road || '';
-      var wijken = [];
-      
-      // Verzamel ALLE wijken/buurten
-      if(addr.suburb) wijken.push(addr.suburb);
-      if(addr.admin_level_10 && addr.admin_level_10 !== addr.suburb) wijken.push(addr.admin_level_10);
-      if(addr.admin_level_9 && wijken.indexOf(addr.admin_level_9) === -1) wijken.push(addr.admin_level_9);
-      if(addr.district && wijken.indexOf(addr.district) === -1) wijken.push(addr.district);
-      
-      var city = addr.city || addr.town || addr.village || '';
-      
-      // Score: meer wijken = beter
-      score = wijken.length * 10;
-      if(street) score += 5;
-      if(city) score += 3;
-      
-      // Kies beste
-      if(score > bestScore){
-        bestScore = score;
-        bestResult = {
-          lon: lon,
-          lat: lat,
-          street: street,
-          wijken: wijken,
-          wijk: wijken.length > 0 ? wijken[0] : '',  // Eerste/beste wijk
-          city: city
-        };
+  function tryFullAddress(){
+    var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&addressdetails=1&limit=5&viewbox=' + viewbox + '&bounded=1&zoom=14';
+    return fetch(url).then(function(r){ return r.json(); }).then(function(results){
+      if(!results || !results.length) return null;
+      var bestResult = null;
+      var bestScore = -1;
+      for(var i=0; i<results.length; i++){
+        var result = results[i];
+        if(!result || !result.lat || !result.lon) continue;
+        var addr = result.address || {};
+        var lat = parseFloat(result.lat);
+        var lon = parseFloat(result.lon);
+        var score = 0;
+        var street = addr.street || addr.road || '';
+        var wijken = [];
+        if(addr.suburb) wijken.push(addr.suburb);
+        if(addr.admin_level_10 && addr.admin_level_10 !== addr.suburb) wijken.push(addr.admin_level_10);
+        if(addr.admin_level_9 && wijken.indexOf(addr.admin_level_9) === -1) wijken.push(addr.admin_level_9);
+        if(addr.district && wijken.indexOf(addr.district) === -1) wijken.push(addr.district);
+        var city = addr.city || addr.town || addr.village || '';
+        score = wijken.length * 10;
+        if(street) score += 5;
+        if(city) score += 3;
+        if(score > bestScore){
+          bestScore = score;
+          bestResult = {
+            lon: lon,
+            lat: lat,
+            street: street,
+            wijken: wijken,
+            wijk: wijken.length > 0 ? wijken[0] : '',
+            city: city
+          };
+        }
       }
-    }
-    
-    if(!bestResult) return null;
-    
-    // Bouw label: "Straat, Wijk1, Wijk2, Stad"
-    var label = bestResult.street;
-    if(bestResult.wijken.length > 0) {
-      label += ', ' + bestResult.wijken.join(', ');
-    }
-    if(bestResult.city) {
-      label += ', ' + bestResult.city;
-    }
-    
-    return {
-      lon: bestResult.lon,
-      lat: bestResult.lat,
-      label: label || q,
-      street: bestResult.street,
-      wijken: bestResult.wijken,
-      wijk: bestResult.wijk,
-      city: bestResult.city
-    };
-    
-  }).catch(function(err){
-    console.error('Nominatim geocode error:', err);
-    return null;
-  });
+      return bestResult;
+    });
+  }
+  function tryPlaceOnly(){
+    var plaats = q.split(/\s+/).pop();
+    if(plaats === q) return Promise.resolve(null);
+    var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(plaats) + '&format=json&addressdetails=1&limit=1&viewbox=' + viewbox + '&bounded=1&zoom=10';
+    return fetch(url).then(function(r){ return r.json(); }).then(function(results){
+      if(!results || !results.length) return null;
+      var result = results[0];
+      if(!result) return null;
+      return {
+        lon: parseFloat(result.lon),
+        lat: parseFloat(result.lat),
+        street: q,
+        wijken: [],
+        wijk: '',
+        city: plaats
+      };
+    });
+  }
+  function fallbackOriginal(){
+    var plaats = q.split(/\s+/).pop();
+    return Promise.resolve({
+      lon: null,
+      lat: null,
+      street: q,
+      wijken: [],
+      wijk: '',
+      city: plaats || 'Onbekend'
+    });
+  }
+  return tryFullAddress()
+    .then(function(result){
+      if(result) return result;
+      console.log('Strategie 1 faalde, probeer Strategie 2...');
+      return tryPlaceOnly();
+    })
+    .then(function(result){
+      if(result) return result;
+      console.log('Strategie 2 faalde, gebruik Strategie 3 (origineel adres)...');
+      return fallbackOriginal();
+    })
+    .then(function(bestResult){
+      if(!bestResult) return null;
+      var label = bestResult.street;
+      if(bestResult.wijken.length > 0) {
+        label += ', ' + bestResult.wijken.join(', ');
+      }
+      if(bestResult.city) {
+        label += ', ' + bestResult.city;
+      }
+      return {
+        lon: bestResult.lon,
+        lat: bestResult.lat,
+        label: label || q,
+        street: bestResult.street,
+        wijken: bestResult.wijken,
+        wijk: bestResult.wijk,
+        city: bestResult.city
+      };
+    })
+    .catch(function(err){
+      console.error('Nominatim geocode error:', err);
+      var plaats = q.split(/\s+/).pop();
+      return {
+        lon: null,
+        lat: null,
+        label: q,
+        street: q,
+        wijken: [],
+        wijk: '',
+        city: plaats || 'Onbekend'
+      };
+    });
 }
 
-/* Nominatim fallback */
 function geocodeNominatim(q){
   // Bepaal de plaats uit de query zelf (bijv. "ALMERE" uit "GRIENDENBRUG ALMERE")
   var explicitPlaats = null;
