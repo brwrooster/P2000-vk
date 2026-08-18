@@ -820,7 +820,12 @@ function bewaarTakenCentraal(){
       holdMin: HOLD_MIN,
       themeMode: THEME_MODE
     })
-  }).then(function(r){ return r.json(); }).catch(function(){ return { error:'niet bereikbaar' }; });
+  }).then(function(r){
+    return r.json().then(function(d){
+      if(!r.ok && !(d && d.error)) return { error: 'server gaf HTTP '+r.status };
+      return d;
+    }).catch(function(){ return r.ok ? {} : { error: 'server gaf HTTP '+r.status }; });
+  }).catch(function(){ return { error:'geen verbinding met de server' }; });
 }
 haalTakenCentraal();
 setInterval(haalTakenCentraal, 20*1000);
@@ -2080,49 +2085,70 @@ function openCfg(){
 }
 document.getElementById('cfgClose').onclick=function(){ cfgPanel.classList.remove('open'); };
 document.getElementById('cfgSave').onclick=function(){
-  var caps=document.getElementById('cfgCaps').value.match(/\d{4,7}/g)||[];
-  var hold=parseInt(document.getElementById('cfgHold').value,10);
-  var p=tekstNaarPosts(document.getElementById('cfgPosts').value);
-  var u=tekstNaarUnits(document.getElementById('cfgUnits').value);
-  
-  // Lees themakeuze in
-  var themeRadios = document.querySelectorAll('input[name="themeMode"]');
-  for(var i=0; i<themeRadios.length; i++){
-    if(themeRadios[i].checked){
-      THEME_MODE = themeRadios[i].value;
-      break;
-    }
-  }
-  
   var msg=document.getElementById('cfgMsg');
-  if(!caps.length){ msg.textContent='Let op: vul minstens één capcode in.'; return; }
-  FILTER_CAPCODES=caps;
-  HOLD_MIN=(!isNaN(hold)&&hold>0)?hold:DEFAULT_HOLD_MIN;
-  var telP=0,k; for(k in p){ if(p.hasOwnProperty(k)) telP++; }
-  var telU=0; for(k in u){ if(u.hasOwnProperty(k)) telU++; }
-  if(telP) POSTS=p;
-  if(telU) UNITS=u;
-  var tks=leesTaakEditor();
-  TASKS=tks;
-  refreshPostCapcodes();
-  pasThemaToe();  // Pas thema direct toe
-  saveCfg();
-  renderTasks();
-  lastFeedId=null; firstPoll=true;
-  msg.textContent='Opslaan…';
-  saveCfg();  // Eerst lokaal opslaan
-  pasThemaToe();
-  bewaarTakenCentraal().then(function(res){
-    if(res && res.error){
-      msg.textContent='Centraal opslaan MISLUKT: '+res.error+' — andere schermen krijgen dit niet en dit scherm wordt binnen 20 sec teruggezet.';
-      console.error('bewaarTakenCentraal:', res);
-    }else{
-      msg.textContent='Opgeslagen! Thema: '+THEME_MODE;
+  msg.style.color='';
+  try{
+    msg.textContent='Bezig met opslaan…';
+
+    var caps=document.getElementById('cfgCaps').value.match(/\d{4,7}/g)||[];
+    if(!caps.length){ msg.textContent='Let op: vul minstens één capcode in.'; return; }
+
+    var hold=parseInt(document.getElementById('cfgHold').value,10);
+    var p=tekstNaarPosts(document.getElementById('cfgPosts').value);
+    var u=tekstNaarUnits(document.getElementById('cfgUnits').value);
+
+    // Lees themakeuze in
+    var themeRadios = document.querySelectorAll('input[name="themeMode"]');
+    for(var i=0; i<themeRadios.length; i++){
+      if(themeRadios[i].checked){ THEME_MODE = themeRadios[i].value; break; }
     }
-  }).catch(function(e){
-    msg.textContent='Opgeslagen lokaal (server niet bereikt)';
-    console.error('bewaarTakenCentraal error:', e);
-  });
+
+    FILTER_CAPCODES=caps;
+    HOLD_MIN=(!isNaN(hold)&&hold>0)?hold:DEFAULT_HOLD_MIN;
+    var telP=0,k; for(k in p){ if(p.hasOwnProperty(k)) telP++; }
+    var telU=0; for(k in u){ if(u.hasOwnProperty(k)) telU++; }
+    if(telP) POSTS=p;
+    if(telU) UNITS=u;
+
+    var tks=[];
+    try{ tks=leesTaakEditor(); TASKS=tks; }
+    catch(eTaak){ console.error('Takeneditor lezen mislukt:', eTaak); }
+
+    refreshPostCapcodes();
+    saveCfg();  // Eerst lokaal opslaan - dit lukt altijd
+    try{ pasThemaToe(); }catch(e1){ console.error('pasThemaToe:', e1); }
+    try{ renderTasks(); }catch(e2){ console.error('renderTasks:', e2); }
+    lastFeedId=null; firstPoll=true;
+
+    // Samenvatting van wat er is opgeslagen
+    var overzicht = caps.length+' capcode'+(caps.length===1?'':'s')
+      + ', '+telP+' post'+(telP===1?'':'en')
+      + ', '+telU+' voertuig'+(telU===1?'':'en')
+      + ', '+tks.length+' ta'+(tks.length===1?'ak':'ken')
+      + ', melding blijft '+HOLD_MIN+' min staan, thema: '+THEME_MODE;
+
+    msg.textContent='Lokaal opgeslagen ('+overzicht+'). Nu naar de server…';
+
+    bewaarTakenCentraal().then(function(res){
+      if(res && res.error){
+        msg.style.color='#ff6b6b';
+        msg.textContent='Centraal opslaan MISLUKT: '+res.error+' — andere schermen krijgen dit niet en dit scherm wordt binnen 20 sec teruggezet.';
+        console.error('bewaarTakenCentraal:', res);
+      }else{
+        msg.style.color='#5dd39e';
+        msg.textContent='✓ Opgeslagen voor alle schermen: '+overzicht+'.';
+      }
+    }).catch(function(e){
+      msg.style.color='#ffb64c';
+      msg.textContent='Alleen lokaal opgeslagen ('+overzicht+'). Server niet bereikt: '+(e && e.message ? e.message : e);
+      console.error('bewaarTakenCentraal error:', e);
+    });
+  }catch(fout){
+    // Zonder deze vangnet-melding leek de knop "niks te doen" bij een scriptfout
+    msg.style.color='#ff6b6b';
+    msg.textContent='Opslaan mislukt door een scriptfout: '+(fout && fout.message ? fout.message : fout);
+    console.error('cfgSave fout:', fout);
+  }
 };
 document.getElementById('cfgReset').onclick=function(){
   FILTER_CAPCODES=DEFAULT_CAPCODES.slice();
