@@ -855,11 +855,31 @@ function currentPloeg(now){
   return PLOEGEN[((days % 4) + 4) % 4];
 }
 
+function zoekUnit(code){
+  // 1) Volledig capcodenummer (bv. 254131) heeft altijd voorrang
+  if(UNITS[code]) return UNITS[code];
+  var zonderNul = code.replace(/^0+/,'');
+  if(zonderNul !== code && UNITS[zonderNul]) return UNITS[zonderNul];
+  if(UNITS['0'+code]) return UNITS['0'+code];
+  // 2) Oude verkorte notatie (laatste 4 cijfers) blijft werken...
+  var kort = code.slice(-4);
+  if(kort !== code && UNITS[kort]){
+    // ...maar NIET als er ook een volledig nummer met dezelfde laatste 4 cijfers
+    // in de lijst staat. Dan telt alleen dat volledige nummer, zodat bv.
+    // Amsterdam 134131 niet meer op het eigen voertuig 254131 kan matchen.
+    for(var k in UNITS){
+      if(UNITS.hasOwnProperty(k) && k.length >= 6 && k.slice(-4) === kort) return null;
+    }
+    return UNITS[kort];
+  }
+  return null;
+}
+
 function parseUnits(str){
   var codes = (str||'').match(/\d{4,7}/g) || [];
   var out = [];
   codes.forEach(function(code){
-    var u = UNITS[code.slice(-4)];
+    var u = zoekUnit(code);
     // postcapcode overslaan, maar alleen als het geen bekend voertuig is
     if(!u && POST_CAPCODES.indexOf(code) !== -1) return;
     out.push({
@@ -1701,11 +1721,13 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
   }
   
   // Fallback op LOCATIES_CONFIG als niet hardcoded gevonden
+  // Alleen op HELE woorden matchen: anders zou bv. VOORBURG per ongeluk
+  // op de Almere-locatie "voor" matchen. Deze lijst is kazerne-specifiek.
   if(!knownGeo && addr && LOCATIES_CONFIG && LOCATIES_CONFIG.length > 0){
-    var addrLower = addr.toLowerCase();
+    var addrWoorden = addr.toLowerCase().split(/[^a-z0-9]+/);
     for(var ki=0; ki<LOCATIES_CONFIG.length; ki++){
       var loc = LOCATIES_CONFIG[ki];
-      if(addrLower.indexOf(loc.naam) !== -1){
+      if(addrWoorden.indexOf(loc.naam) !== -1){
         // Gevonden! Gebruik de vooraf gedefinieerde coördinaten
         knownGeo = { lat: loc.coord[0], lon: loc.coord[1], label: loc.naam.toUpperCase() };
         break;
@@ -1743,11 +1765,19 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
     // hectometerpaal heeft voorrang (bv. "A6 102,7")
     var hmInfo = vindHectometer((geoHint||'') + ' ' + (addr||''));
     if(hmInfo){
-      // Bij hectometer: format als "km" voor beter zoeken
+      // Bij hectometer: format als "km" voor beter zoeken.
+      // Plaats uit de melding zelf halen (laatste woord), niet hardcoden.
+      var hmWoorden = (addr||'').split(/\s+/).filter(Boolean);
+      var hmPlaats = '';
+      for(var hi=hmWoorden.length-1; hi>=0; hi--){
+        if(/^[A-Za-z][A-Za-z\-']+$/.test(hmWoorden[hi]) && !/^(RECHTS|LINKS|RECHTSBAAN|LINKSBAAN|HMP|RE|LI)$/i.test(hmWoorden[hi])){
+          hmPlaats = ' ' + hmWoorden[hi]; break;
+        }
+      }
       var kmStr = hmInfo.hm.replace(',', '');
-      cand.push({ q: hmInfo.weg + ' km ' + kmStr + ' Almere', type: 'hectometerpaal' });
-      cand.push({ q: hmInfo.weg + ' kilometer ' + kmStr + ' Almere', type: 'hectometerpaal' });
-      cand.push({ q: hmInfo.weg + ' ' + hmInfo.hm + ' Almere', type: 'hectometerpaal' });
+      cand.push({ q: hmInfo.weg + ' km ' + kmStr + hmPlaats, type: 'hectometerpaal' });
+      cand.push({ q: hmInfo.weg + ' kilometer ' + kmStr + hmPlaats, type: 'hectometerpaal' });
+      cand.push({ q: hmInfo.weg + ' ' + hmInfo.hm + hmPlaats, type: 'hectometerpaal' });
       cand.push({ q: hmInfo.weg + ' ' + hmInfo.hm, type: 'hectometerpaal' });
       cand.push({ q: hmInfo.weg + ' ' + hmInfo.hm });
     }
@@ -1805,9 +1835,13 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
         loadRoute({lat:geo.lat,lon:geo.lon});
         loadUnitETAs(unitList,{lat:geo.lat,lon:geo.lon});
       }else{
-        // FALLBACK: Toon origineel adres (NIET "Locatie niet gevonden"!)
-        document.getElementById('incidentStreet').textContent = addr || 'Locatie onbekend';
-        document.getElementById('incidentPlace').textContent = 'Almere';  // Fallback stad
+        // FALLBACK: Toon origineel adres uit de melding (geen hardcoded plaats -
+        // moet voor heel Nederland kloppen). Laatste woord is vrijwel altijd de plaats.
+        var fbWoorden = (addr || '').split(/\s+/).filter(Boolean);
+        var fbPlaats = fbWoorden.length > 1 ? fbWoorden[fbWoorden.length - 1] : '';
+        var fbStraat = fbPlaats ? fbWoorden.slice(0, -1).join(' ') : (addr || 'Locatie onbekend');
+        document.getElementById('incidentStreet').textContent = fbStraat || addr || 'Locatie onbekend';
+        document.getElementById('incidentPlace').textContent = fbPlaats;
         document.getElementById('routeTime').textContent='n.b.';
         document.getElementById('routeDist').textContent='n.b.';
         document.getElementById('routeBadge').classList.remove('loading');
@@ -2079,7 +2113,12 @@ document.getElementById('cfgSave').onclick=function(){
   saveCfg();  // Eerst lokaal opslaan
   pasThemaToe();
   bewaarTakenCentraal().then(function(res){
-    msg.textContent='Opgeslagen! Thema: '+THEME_MODE;
+    if(res && res.error){
+      msg.textContent='Centraal opslaan MISLUKT: '+res.error+' — andere schermen krijgen dit niet en dit scherm wordt binnen 20 sec teruggezet.';
+      console.error('bewaarTakenCentraal:', res);
+    }else{
+      msg.textContent='Opgeslagen! Thema: '+THEME_MODE;
+    }
   }).catch(function(e){
     msg.textContent='Opgeslagen lokaal (server niet bereikt)';
     console.error('bewaarTakenCentraal error:', e);
