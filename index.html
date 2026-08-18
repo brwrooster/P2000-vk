@@ -26,7 +26,7 @@
     --ok:#37d67a;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%}
+  html,body{height:100%;height:100dvh}
   /* muispijl verdwijnt bij stilstand, komt terug bij beweging */
   body.geen-muis, body.geen-muis *{cursor:none !important}
 
@@ -59,7 +59,7 @@
   }
   #screen{
     position:relative;
-    width:100vw;min-height:100vh;
+    width:100vw;min-height:100vh;min-height:100dvh;
     display:flex;flex-direction:column;
   }
 
@@ -462,13 +462,13 @@
   @media(prefers-reduced-motion:reduce){
     *{transition:none!important}
   }
-.duty{font-size:1.6rem;font-weight:bold;color:#0b63b8;}
+.duty{font-size:2vh;font-weight:bold;color:#0b63b8;}
 .duty-container{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:.4rem;margin-bottom:1.4vh;
+  gap:.4vh;margin-bottom:1.2vh;
 }
 .ploeg-logo-duty{
-  height:2.4rem;width:auto;display:block;object-fit:contain;
+  height:2.8vh;width:auto;display:block;object-fit:contain;
 }
 .ploeg-logo-duty[src=""]{display:none}
 
