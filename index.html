@@ -799,14 +799,16 @@ function renderTasks(){
 /* Dynamisch fontsize aanpassen zodat alle taken passen */
 function adjustTaskFontSize(){
   var bar = document.getElementById('taskBar');
-  if(!bar || bar.children.length === 0) return;
-  
+  if(!bar) return;
+  var items = bar.querySelectorAll('.task');
+  if(!items.length) return;
+
   var maxFontSize = 2.9; // Default vh
-  var minFontSize = 1.0; // Minimum vh
+  var minFontSize = 1.2; // Minimum vh, blijft nog leesbaar
   var currentSize = maxFontSize;
-  
+
   while(currentSize >= minFontSize){
-    bar.style.fontSize = currentSize + 'vh';
+    for(var i=0;i<items.length;i++) items[i].style.fontSize = currentSize + 'vh';
     if(bar.scrollWidth <= bar.clientWidth) break;
     currentSize -= 0.1;
   }
