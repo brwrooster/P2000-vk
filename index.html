@@ -1271,85 +1271,165 @@ function pollEigenOntvanger(){
 setInterval(pollEigenOntvanger, 2000);
 pollEigenOntvanger();
 
-/* ================= PDOK Locatieserver (OFFICIEEL NEDERLANDS) ================= */
-function geocodePDOK(q){
-/* Wrapper function - calls geocodePDOK */
+/* ================= PDOK Locatieserver (OFFICIEEL NEDERLANDS) =================
+   LET OP: de oude URL (geodata.nationaalgeoregister.nl) is in augustus 2023
+   definitief gestopt. Hieronder de nieuwe basis-URL.
+   Bron: BAG - alle officiele straten en woonplaatsen van heel Nederland. */
+var PDOK_BASIS = 'https://api.pdok.nl/bzk/locatieserver/search/v3_1/';
+
+function parseCentroide(s){
+  // PDOK geeft "POINT(5.21 52.37)" -> eerst lon, dan lat
+  var m = (s||'').match(/(-?[\d\.]+)\s+(-?[\d\.]+)/);
+  if(!m) return null;
+  return { lon: parseFloat(m[1]), lat: parseFloat(m[2]) };
+}
+
+/* Meldkamer-spelling en officiele BAG-spelling gelijktrekken */
+var PLAATS_ALIASSEN = [
+  [/\bDEN HAAG\b/g, 'S GRAVENHAGE'],
+  [/\bDEN BOSCH\b/g, 'S HERTOGENBOSCH']
+];
+function normaliseerAdres(t){
+  var n = (t||'').toUpperCase()
+    .replace(/['`\u2019\.\-]/g, ' ')
+    .replace(/[(),\/]/g, ' ')
+    .replace(/\s+/g, ' ').trim();
+  for(var i=0;i<PLAATS_ALIASSEN.length;i++){
+    n = n.replace(PLAATS_ALIASSEN[i][0], PLAATS_ALIASSEN[i][1]);
+  }
+  return n;
+}
+
+/* Straat + plaats uit het EINDE van de melding herkennen.
+   Een P2000-regel eindigt (na verwijderen van de capcodes) altijd op:
+     ... MELDINGTEKST STRAAT [HUISNR] PLAATS
+   We proberen daarom de laatste 2 woorden, dan 3, dan 4, enzovoort, en
+   vragen PDOK of dat EXACT een bestaande straat + woonplaats is.
+   Alleen een exacte match telt: daardoor kan er nooit een stuk
+   meldingtekst (zoals "(BINNEN)") per ongeluk in het adres belanden. */
+function herkenAdresUitMelding(woorden){
+  var maxN = Math.min(7, woorden.length);
+
+  function probeer(n){
+    if(n > maxN) return Promise.resolve(null);
+    var deel = woorden.slice(woorden.length - n);
+
+    // los huisnummer (bv. 43, 12A, 101-103) apart zetten
+    var straatDeel = [], huisnr = '';
+    for(var i=0;i<deel.length;i++){
+      if(i > 0 && /^\d{1,4}([A-Za-z]|-\d{1,4})?$/.test(deel[i])){ huisnr = deel[i]; }
+      else straatDeel.push(deel[i]);
+    }
+    var metNummer = normaliseerAdres(deel.join(' '));
+    var zonderNummer = normaliseerAdres(straatDeel.join(' '));
+    if(zonderNummer.length < 4) return probeer(n+1);
+
+    var url = PDOK_BASIS + 'free?q=' + encodeURIComponent(deel.join(' '))
+      + '&fq=' + encodeURIComponent('type:weg')
+      + '&rows=5&fl=' + encodeURIComponent('id,type,straatnaam,woonplaatsnaam,gemeentenaam,centroide_ll');
+
+    return fetch(url).then(function(r){ return r.json(); }).then(function(d){
+      var docs = (d && d.response && d.response.docs) || [];
+      for(var j=0;j<docs.length;j++){
+        var doc = docs[j];
+        var viaWoonplaats = normaliseerAdres((doc.straatnaam||'') + ' ' + (doc.woonplaatsnaam||''));
+        var viaGemeente   = normaliseerAdres((doc.straatnaam||'') + ' ' + (doc.gemeentenaam||''));
+        var treffer = null;
+        if(metNummer === viaWoonplaats || metNummer === viaGemeente){
+          treffer = { huisnummer: '' };  // getal hoort bij de straatnaam zelf (bv. Plein 1944)
+        } else if(huisnr && (zonderNummer === viaWoonplaats || zonderNummer === viaGemeente)){
+          treffer = { huisnummer: huisnr };
+        }
+        if(treffer){
+          var basis = {
+            straat: doc.straatnaam,
+            woonplaats: doc.woonplaatsnaam || doc.gemeentenaam || '',
+            huisnummer: treffer.huisnummer,
+            coord: parseCentroide(doc.centroide_ll),
+            aantalWoorden: n
+          };
+          // met huisnummer: exact adres opzoeken voor een preciezere kaartpositie
+          if(basis.huisnummer){
+            var urlAdres = PDOK_BASIS + 'free?q='
+              + encodeURIComponent(basis.straat + ' ' + basis.huisnummer + ' ' + basis.woonplaats)
+              + '&fq=' + encodeURIComponent('type:adres')
+              + '&rows=1&fl=' + encodeURIComponent('id,centroide_ll');
+            return fetch(urlAdres).then(function(r2){ return r2.json(); }).then(function(d2){
+              var a = d2 && d2.response && d2.response.docs && d2.response.docs[0];
+              if(a && a.centroide_ll) basis.coord = parseCentroide(a.centroide_ll) || basis.coord;
+              return basis;
+            }).catch(function(){ return basis; });
+          }
+          return basis;
+        }
+      }
+      return probeer(n+1);
+    }).catch(function(){ return probeer(n+1); });
+  }
+  return probeer(2);
+}
+
+/* Wijk + stadsdeel zoals bekend bij OpenStreetMap (Nominatim).
+   Voorbeeld: Odinstraat, Almere -> wijk "Columbuskwartier", stadsdeel "Almere Poort".
+   Nominatim gebruikt per stad andere veldnamen (neighbourhood / quarter /
+   suburb / city_district), daarom proberen we ze in volgorde van klein naar groot. */
+function zoekWijkOSM(straat, plaats){
+  if(!straat || !plaats) return Promise.resolve(null);
+  var url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1&countrycodes=nl&accept-language=nl'
+    + '&street=' + encodeURIComponent(straat)
+    + '&city=' + encodeURIComponent(plaats);
+  return fetch(url).then(function(r){ return r.json(); }).then(function(res){
+    if(!res || !res.length) return null;
+    var a = res[0].address || {};
+    console.log('OSM-adresvelden voor', straat, plaats, ':', a); // handig bij controleren
+    var wijkKeuzes = [a.neighbourhood, a.quarter, a.residential, a.suburb];
+    var wijk = '';
+    for(var i=0;i<wijkKeuzes.length;i++){ if(wijkKeuzes[i]){ wijk = wijkKeuzes[i]; break; } }
+    var deelKeuzes = [a.city_district, a.borough, a.suburb, a.district];
+    var stadsdeel = '';
+    for(var j=0;j<deelKeuzes.length;j++){
+      if(deelKeuzes[j] && deelKeuzes[j] !== wijk){ stadsdeel = deelKeuzes[j]; break; }
+    }
+    return { wijk: wijk, stadsdeel: stadsdeel };
+  }).catch(function(){ return null; });
+}
+
+/* Wrapper: bestaande code roept geocode() aan.
+   (Stond eerst PER ONGELUK BINNEN geocodePDOK en bestond daardoor niet.) */
 function geocode(q, type, verwacht){
   return geocodePDOK(q);
 }
 
-  // Gebruik PDOK Locatieserver (official Dutch geocoding service)
-  // Endpoint: https://geodata.nationaalgeoregister.nl/locatieserver/v3/
-  
-  if(!q || q.trim().length < 2) return { lon: 5.2, lat: 52.1, label: 'Almere', street: '', wijken: [], wijk: '', city: 'Almere' };
-  
-  var url = 'https://geodata.nationaalgeoregister.nl/locatieserver/v3/search?q=' + encodeURIComponent(q) + '&rows=5&fl=id,type,weergavenaam,bron,centroide_ll,adresseerbaarobject,openbareruimte';
-  
+function geocodePDOK(q){
+  if(!q || q.trim().length < 2) return Promise.resolve(null);
+
+  var url = PDOK_BASIS + 'free?q=' + encodeURIComponent(q)
+    + '&fq=' + encodeURIComponent('type:(adres OR weg OR woonplaats)')
+    + '&rows=5&fl=' + encodeURIComponent('id,type,weergavenaam,straatnaam,woonplaatsnaam,gemeentenaam,centroide_ll');
+
   return fetch(url)
     .then(function(r){ return r.json(); })
     .then(function(data){
-      if(!data.response || !data.response.docs || data.response.docs.length === 0){
-        // Fallback: return original query
-        return {
-          lon: 5.2, lat: 52.1,
-          label: q,
-          street: q,
-          wijken: [],
-          wijk: '',
-          city: 'Almere'
-        };
-      }
-      
-      var doc = data.response.docs[0];
-      var coord = doc.centroide_ll ? doc.centroide_ll.split(' ') : [5.2, 52.1];
-      var lon = parseFloat(coord[0]) || 5.2;
-      var lat = parseFloat(coord[1]) || 52.1;
-      
-      // Verkrijg adres-onderdelen van PDOK
-      var street = '';
-      var wijken = [];
-      var city = 'Almere';
-      
-      // PDOK geeft weergavenaam terug die alles bevat
-      var weergave = doc.weergavenaam || q;
-      
-      // Parse weergavenaam: meestal "straat huisnummer, wijk, plaats"
-      var parts = weergave.split(',').map(function(p){ return p.trim(); });
-      
-      if(parts.length > 0) street = parts[0];  // Straat + huisnummer
-      if(parts.length > 1) wijken.push(parts[1]);  // Wijk
-      if(parts.length > 2) city = parts[2];  // Plaats
-      
-      // Extra: als type is wijk/plaats, voeg die toe
-      if(doc.type === 'wijk' && wijken.indexOf(doc.weergavenaam) === -1){
-        wijken.push(doc.weergavenaam);
-      }
-      
-      var label = street;
-      if(wijken.length > 0) label += ', ' + wijken.join(', ');
-      if(city) label += ', ' + city;
-      
+      var docs = (data && data.response && data.response.docs) || [];
+      if(!docs.length) return null; // niets gevonden: volgende kandidaat proberen
+
+      var doc = docs[0];
+      var c = parseCentroide(doc.centroide_ll) || { lon: 5.2, lat: 52.37 };
+      var street = doc.straatnaam || (doc.weergavenaam || q).split(',')[0].trim();
+      var city = doc.woonplaatsnaam || doc.gemeentenaam || '';
+
       return {
-        lon: lon,
-        lat: lat,
-        label: label,
+        lon: c.lon, lat: c.lat,
+        label: street + (city ? ', ' + city : ''),
         street: street,
-        wijken: wijken,
-        wijk: wijken.length > 0 ? wijken[0] : '',
-        city: city || 'Almere'
+        wijken: [],
+        wijk: '',
+        city: city || 'Onbekend'
       };
     })
     .catch(function(err){
       console.error('PDOK error:', err);
-      // Fallback: return original
-      return {
-        lon: 5.2, lat: 52.1,
-        label: q,
-        street: q,
-        wijken: [],
-        wijk: '',
-        city: 'Almere'
-      };
+      return null;
     });
 }
 
@@ -1645,6 +1725,14 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
     loadRoute({lat:knownGeo.lat,lon:knownGeo.lon});
     loadUnitETAs(unitList,{lat:knownGeo.lat,lon:knownGeo.lon});
   }else{
+    /* ===== NIEUW: straat + plaats herkennen via PDOK (heel Nederland) =====
+       De straatnaam staat in een P2000-regel altijd VOOR de plaatsnaam en
+       zat daardoor voorheen in het meldingtype. We laten PDOK nu bevestigen
+       welke woorden aan het eind samen een echt adres vormen. */
+    var volledigeTekst = ((type||'') + ' ' + (addr && addr !== 'Onbekend' ? addr : '')).replace(/\s+/g,' ').trim();
+    var alleWoorden = volledigeTekst ? volledigeTekst.split(' ') : [];
+
+    var standaardGeocodering = function(){
     // ANDERS: Standaard geocoding via PDOK
     // kandidaten opbouwen: meer context = betere straat-treffer
     var cand=[];
@@ -1725,6 +1813,50 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
         document.getElementById('routeBadge').classList.remove('loading');
       }
     });
+    };
+
+    if(isHighway || alleWoorden.length < 2){
+      // Snelwegen blijven het bestaande hectometer-pad volgen
+      standaardGeocodering();
+    } else {
+      herkenAdresUitMelding(alleWoorden).then(function(res){
+        if(!res){ standaardGeocodering(); return; }
+
+        // 1) Meldingtype opschonen: de herkende adres-woorden achteraan weghalen
+        var schoonType = alleWoorden.slice(0, alleWoorden.length - res.aantalWoorden)
+          .join(' ').replace(/[\s\-]+$/,'').trim();
+        if(schoonType) fitIncident(schoonType);
+
+        // 2) Adres meteen tonen in de officiele BAG-schrijfwijze
+        var straatRegel = res.straat + (res.huisnummer ? ' ' + res.huisnummer : '');
+        document.getElementById('incidentStreet').textContent = straatRegel;
+        document.getElementById('incidentPlace').textContent = res.woonplaats;
+        lastAddr = straatRegel + ', ' + res.woonplaats;
+
+        // 3) Kaart, route en aanrijtijden op de PDOK-coordinaten
+        if(res.coord){
+          initMap({lat:res.coord.lat, lon:res.coord.lon});
+          loadRoute({lat:res.coord.lat, lon:res.coord.lon});
+          loadUnitETAs(unitList, {lat:res.coord.lat, lon:res.coord.lon});
+        }
+
+        // 4) Wijk + stadsdeel erbij zoeken via OpenStreetMap
+        zoekWijkOSM(res.straat, res.woonplaats).then(function(w){
+          if(!w) return;
+          if(w.wijk){
+            document.getElementById('incidentStreet').textContent = straatRegel + ', ' + w.wijk;
+          }
+          var plaatsRegel = res.woonplaats;
+          if(w.stadsdeel){
+            plaatsRegel = (w.stadsdeel.toUpperCase().indexOf(res.woonplaats.toUpperCase()) !== -1)
+              ? w.stadsdeel
+              : (w.stadsdeel + ', ' + res.woonplaats);
+          }
+          document.getElementById('incidentPlace').textContent = plaatsRegel;
+          lastAddr = straatRegel + (w.wijk ? ', ' + w.wijk : '') + ', ' + plaatsRegel;
+        });
+      });
+    }
   }
 }
 function clearAlarm(){
@@ -2057,7 +2189,9 @@ function schrijfUit(t){
     .replace(/\bAMBU\b/gi, 'Ambulance')
     .replace(/\s+/g,' ').trim();
 }
-document.getElementById('fireBtn').onclick=function(){
+/* parseP2000 stond eerst per ongeluk BINNEN de klik-functie van de testknop.
+   Daardoor bestond hij niet voor de live feed en de eigen ontvanger,
+   en gaven die stilletjes een foutmelding. Nu weer globaal beschikbaar. */
 function parseP2000(raw){
   // SAVE ORIGINEEL
   var originalText = (raw||'').replace(/\s+/g,' ').trim();
@@ -2133,6 +2267,8 @@ function parseP2000(raw){
     coord: null
   };
 }
+
+document.getElementById('fireBtn').onclick=function(){
   var raw=document.getElementById('fRaw').value.trim();
   if(!raw){document.getElementById('fRaw').focus();return;}
   var p=parseP2000(raw);
