@@ -70,6 +70,7 @@
     padding:2.2vh 3vw;
     border-bottom:1px solid #20304a;
     flex:0 0 auto;
+    background:#0a0f1a;
     transition:background .4s ease, border-color .4s ease;
   }
   .mark{
@@ -78,7 +79,7 @@
     -webkit-tap-highlight-color:transparent;
   }
   .mark svg{width:100%;height:100%;display:block}
-  .post-id{display:flex;flex-direction:column;line-height:1.05;flex:0 0 auto}
+  .post-id{display:flex;flex-direction:column;line-height:1.05;flex:0 0 auto;position:relative;z-index:10}
   .post-id .name{
     font-family:'Oswald',sans-serif;font-weight:600;
     letter-spacing:.06em;text-transform:uppercase;
@@ -94,7 +95,8 @@
   }
   .ploeg-logo[src=""]{display:none}
   .topbar .status{
-    margin-left:auto;display:flex;align-items:center;gap:.55rem;
+    position:relative;z-index:10;flex:0 0 auto;
+    display:flex;align-items:center;gap:.55rem;
     color:#8395ad;font-size:1.5vh;
     font-family:'Roboto Mono',monospace;letter-spacing:.04em;
   }
@@ -324,13 +326,20 @@
   }
   #screen.is-alarm .screen-footer{opacity:0}
   .task-bar{
-    position:absolute;left:50%;top:50%;
-    transform:translate(-50%, -50%);
-    display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
-    gap:.6rem 2.2vw;width:auto;white-space:nowrap;
-    pointer-events:none;transition:opacity .3s;
+    flex:1 1 auto;
+    display:flex;justify-content:center;align-items:center;
+    gap:.6rem 2.2vw;
+    white-space:nowrap;
+    overflow:hidden;
+    pointer-events:none;transition:font-size .2s ease;
+    position:relative;z-index:5;
+    height:100%;
   }
   .task-bar:empty{display:none}
+  @keyframes task-scroll{
+    0%{transform:translateX(100vw)}
+    100%{transform:translateX(-100%)}
+  }
   #screen.is-alarm ~ .task-bar{opacity:0}
   .task-bar .task{
     display:flex;align-items:center;gap:.5rem;
@@ -772,7 +781,25 @@ function renderTasks(){
     bar.appendChild(el);
   }
   taskDag = new Date().getDay();
+  adjustTaskFontSize();
 }
+
+/* Dynamisch fontsize aanpassen zodat alle taken passen */
+function adjustTaskFontSize(){
+  var bar = document.getElementById('taskBar');
+  if(!bar || bar.children.length === 0) return;
+  
+  var maxFontSize = 2.9; // Default vh
+  var minFontSize = 1.0; // Minimum vh
+  var currentSize = maxFontSize;
+  
+  while(currentSize >= minFontSize){
+    bar.style.fontSize = currentSize + 'vh';
+    if(bar.scrollWidth <= bar.clientWidth) break;
+    currentSize -= 0.1;
+  }
+}
+
 var taskDag = -1;
 renderTasks();
 
