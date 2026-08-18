@@ -1271,314 +1271,143 @@ function pollEigenOntvanger(){
 setInterval(pollEigenOntvanger, 2000);
 pollEigenOntvanger();
 
-/* ================= Geocoding (PDOK Locatieserver) ================= */
+/* ================= PDOK Locatieserver (OFFICIEEL NEDERLANDS) ================= */
+function geocodePDOK(q){
+/* Wrapper function - calls geocodePDOK */
 function geocode(q, type, verwacht){
-  // Always use geocodePDOK with fallback strategies - NEVER return unknown!
   return geocodePDOK(q);
 }
 
-/* PDOK Locatieserver - veel beter voor hectometerpalen */
-/* Nominatim fallback */
-function geocodePDOK(q){
-  // NATIONWIDE COVERAGE - Handles all of Netherlands!
-  // Smart detection: cities → provinces → entire country
+  // Gebruik PDOK Locatieserver (official Dutch geocoding service)
+  // Endpoint: https://geodata.nationaalgeoregister.nl/locatieserver/v3/
   
-  var explicitPlaats = null;
-  var plaatsen = ['almere', 'amsterdam', 'rotterdam', 'den haag', 'utrecht', 'arnhem', 'nijmegen', 'leiden', 'haarlem', 'lelystad', 'dronten', 'zeewolde', 'emmeloord', 'marknesse', 'naarden', 'hoorn', 'groningen', 'leeuwarden', 'zwolle', 'kampen', 'deventer', 'apeldoorn', 'tilburg', 'breda', 'eindhoven', 'maastricht', 'heerlen', 'roermond', 'venlo', 'alkmaar', 'schagen', 'enkhuizen', 'volendam', 'edam', 'medemblik', 'meppel', 'assen', 'harlingen', 'sneek', 'workum', 'bolsward', 'franeker', 'dokkum', 'delft', 'zierikzee', 'middelburg', 'flushing', 'goes', 'vlissingen', 'wageningen', 'zevenaar', 'duiven', 'doetinchem', 'zutphen', 'winterswijk', 'lochem', 'groenlo', 'lichtenvoorde', 'nunspeet', 'harderwijk', 'barneveld', 'wezep'];
+  if(!q || q.trim().length < 2) return { lon: 5.2, lat: 52.1, label: 'Almere', street: '', wijken: [], wijk: '', city: 'Almere' };
   
-  // PROVINCIES met viewbox
-  var provincies = {
-    'groningen': '6.30,53.10,7.30,53.50',
-    'friesland': '5.40,53.00,6.30,53.50',
-    'drenthe': '6.30,52.70,7.30,53.20',
-    'overijssel': '6.00,52.15,7.10,52.95',
-    'flevoland': '5.00,52.30,6.00,52.90',
-    'gelderland': '5.60,51.80,6.70,52.50',
-    'utrecht': '4.90,51.95,5.50,52.35',
-    'noord-holland': '4.60,52.30,5.30,52.80',
-    'zuid-holland': '4.00,51.95,4.85,52.40',
-    'noord-brabant': '4.60,51.20,5.50,51.90',
-    'limburg': '5.60,50.70,6.30,51.40',
-    'zeeland': '3.35,51.25,4.40,51.85'
-  };
+  var url = 'https://geodata.nationaalgeoregister.nl/locatieserver/v3/search?q=' + encodeURIComponent(q) + '&rows=5&fl=id,type,weergavenaam,bron,centroide_ll,adresseerbaarobject,openbareruimte';
   
-  var qLower = q.toLowerCase();
-  
-  // Detecteer plaats
-  for(var p=0; p<plaatsen.length; p++){
-    if(qLower.indexOf(plaatsen[p]) !== -1){
-      explicitPlaats = plaatsen[p];
-      break;
-    }
-  }
-  
-  // Als plaats niet gevonden, detecteer PROVINCIE
-  var explicitProvincie = null;
-  if(!explicitPlaats){
-    for(var prov in provincies){
-      if(qLower.indexOf(prov) !== -1){
-        explicitProvincie = prov;
-        break;
+  return fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(data){
+      if(!data.response || !data.response.docs || data.response.docs.length === 0){
+        // Fallback: return original query
+        return {
+          lon: 5.2, lat: 52.1,
+          label: q,
+          street: q,
+          wijken: [],
+          wijk: '',
+          city: 'Almere'
+        };
       }
-    }
-  }
-  
-  // Bepaal viewbox
-  var viewboxByPlace = {
-    'almere': '5.10,52.25,5.45,52.50',
-    'amsterdam': '4.75,52.25,5.10,52.45',
-    'rotterdam': '4.25,51.85,4.65,52.05',
-    'den haag': '4.00,52.00,4.35,52.20',
-    'utrecht': '5.10,52.05,5.30,52.15',
-    'arnhem': '5.80,51.95,6.10,52.15',
-    'nijmegen': '5.85,51.80,5.95,51.95',
-    'leiden': '4.45,52.10,4.55,52.20',
-    'haarlem': '4.60,52.35,4.75,52.45',
-    'lelystad': '5.45,52.45,5.65,52.60',
-    'dronten': '5.70,52.65,5.90,52.80',
-    'zeewolde': '5.30,52.35,5.50,52.50',
-    'emmeloord': '5.75,52.65,5.95,52.80',
-    'marknesse': '5.65,52.70,5.85,52.85',
-    'naarden': '5.15,52.28,5.35,52.38',
-    'hoorn': '5.05,52.60,5.15,52.70',
-    'groningen': '6.50,53.15,6.60,53.25',
-    'leeuwarden': '5.75,53.15,5.85,53.25',
-    'zwolle': '6.05,52.50,6.15,52.60',
-    'kampen': '6.30,52.60,6.40,52.70',
-    'deventer': '6.15,52.25,6.25,52.35',
-    'apeldoorn': '6.00,52.15,6.10,52.25',
-    'tilburg': '5.05,51.50,5.15,51.60',
-    'breda': '4.75,51.55,4.85,51.65',
-    'eindhoven': '5.45,51.40,5.55,51.50',
-    'maastricht': '5.65,50.80,5.75,50.90',
-    'heerlen': '5.90,50.85,6.00,50.95',
-    'roermond': '5.95,51.15,6.05,51.25',
-    'venlo': '6.15,51.35,6.25,51.45',
-    'alkmaar': '4.75,52.60,4.85,52.70',
-    'schagen': '4.85,52.75,4.95,52.85',
-    'enkhuizen': '5.20,52.70,5.30,52.80',
-    'volendam': '5.05,52.65,5.15,52.75',
-    'edam': '4.95,52.55,5.05,52.65',
-    'medemblik': '5.15,52.75,5.25,52.85',
-    'meppel': '6.20,52.70,6.30,52.80',
-    'assen': '6.55,53.00,6.65,53.10',
-    'harlingen': '5.40,53.20,5.50,53.30',
-    'sneek': '5.65,53.05,5.75,53.15',
-    'workum': '5.45,52.95,5.55,53.05',
-    'bolsward': '5.55,53.00,5.65,53.10',
-    'franeker': '5.55,53.20,5.65,53.30',
-    'dokkum': '5.95,53.30,6.05,53.40',
-    'delft': '4.35,52.00,4.45,52.10',
-    'zierikzee': '4.00,51.75,4.10,51.85',
-    'middelburg': '3.60,51.50,3.70,51.60',
-    'flushing': '3.55,51.45,3.65,51.55',
-    'goes': '3.85,51.50,3.95,51.60',
-    'vlissingen': '3.45,51.40,3.55,51.50',
-    'wageningen': '5.65,51.95,5.75,52.05',
-    'zevenaar': '6.05,51.90,6.15,52.00',
-    'duiven': '6.00,51.85,6.10,51.95',
-    'doetinchem': '6.25,51.95,6.35,52.05',
-    'zutphen': '6.20,52.10,6.30,52.20',
-    'winterswijk': '6.70,52.10,6.80,52.20',
-    'lochem': '6.40,52.15,6.50,52.25',
-    'groenlo': '6.60,51.95,6.70,52.05',
-    'lichtenvoorde': '6.55,52.00,6.65,52.10',
-    'nunspeet': '5.80,52.30,5.90,52.40',
-    'harderwijk': '5.60,52.35,5.70,52.45',
-    'barneveld': '5.60,52.10,5.70,52.20',
-    'wezep': '6.00,52.40,6.10,52.50'
-  };
-  
-  var viewbox = viewboxByPlace[explicitPlaats];
-  if(!viewbox && explicitProvincie) viewbox = provincies[explicitProvincie];
-  if(!viewbox) viewbox = '3.35,50.70,7.30,53.50'; // HEEL NEDERLAND!
-  
-  function tryFullAddress(){
-    var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) 
-      + '&format=json&addressdetails=1&limit=5&viewbox=' + viewbox + '&bounded=1&zoom=14';
-    
-    return fetch(url).then(function(r){ return r.json(); }).then(function(results){
-      if(!results || !results.length) return null;
-      var bestResult = null;
-      var bestScore = -1;
       
-      for(var i=0; i<results.length; i++){
-        var result = results[i];
-        if(!result || !result.lat || !result.lon) continue;
-        
-        var addr = result.address || {};
-        var lat = parseFloat(result.lat);
-        var lon = parseFloat(result.lon);
-        var score = 0;
-        var street = addr.street || addr.road || '';
-        var wijken = [];
-        
-        if(addr.suburb) wijken.push(addr.suburb);
-        if(addr.admin_level_10 && addr.admin_level_10 !== addr.suburb) wijken.push(addr.admin_level_10);
-        if(addr.admin_level_9 && wijken.indexOf(addr.admin_level_9) === -1) wijken.push(addr.admin_level_9);
-        if(addr.district && wijken.indexOf(addr.district) === -1) wijken.push(addr.district);
-        
-        var city = addr.city || addr.town || addr.village || '';
-        
-        score = wijken.length * 10;
-        if(street) score += 5;
-        if(city) score += 3;
-        
-        if(score > bestScore){
-          bestScore = score;
-          bestResult = {
-            lon: lon,
-            lat: lat,
-            street: street,
-            wijken: wijken,
-            wijk: wijken.length > 0 ? wijken[0] : '',
-            city: city
-          };
-        }
+      var doc = data.response.docs[0];
+      var coord = doc.centroide_ll ? doc.centroide_ll.split(' ') : [5.2, 52.1];
+      var lon = parseFloat(coord[0]) || 5.2;
+      var lat = parseFloat(coord[1]) || 52.1;
+      
+      // Verkrijg adres-onderdelen van PDOK
+      var street = '';
+      var wijken = [];
+      var city = 'Almere';
+      
+      // PDOK geeft weergavenaam terug die alles bevat
+      var weergave = doc.weergavenaam || q;
+      
+      // Parse weergavenaam: meestal "straat huisnummer, wijk, plaats"
+      var parts = weergave.split(',').map(function(p){ return p.trim(); });
+      
+      if(parts.length > 0) street = parts[0];  // Straat + huisnummer
+      if(parts.length > 1) wijken.push(parts[1]);  // Wijk
+      if(parts.length > 2) city = parts[2];  // Plaats
+      
+      // Extra: als type is wijk/plaats, voeg die toe
+      if(doc.type === 'wijk' && wijken.indexOf(doc.weergavenaam) === -1){
+        wijken.push(doc.weergavenaam);
       }
-      return bestResult;
-    });
-  }
-  
-  function tryPlaceOnly(){
-    var plaats = q.split(/\s+/).pop();
-    if(plaats === q) return Promise.resolve(null);
-    
-    var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(plaats) 
-      + '&format=json&addressdetails=1&limit=1&viewbox=' + viewbox + '&bounded=1&zoom=10';
-    
-    return fetch(url).then(function(r){ return r.json(); }).then(function(results){
-      if(!results || !results.length) return null;
       
-      var result = results[0];
-      if(!result) return null;
+      var label = street;
+      if(wijken.length > 0) label += ', ' + wijken.join(', ');
+      if(city) label += ', ' + city;
       
       return {
-        lon: parseFloat(result.lon),
-        lat: parseFloat(result.lat),
-        street: q,
-        wijken: [],
-        wijk: '',
-        city: plaats
-      };
-    });
-  }
-  
-  function fallbackOriginal(){
-    var plaats = q.split(/\s+/).pop();
-    return Promise.resolve({
-      lon: null,
-      lat: null,
-      street: q,
-      wijken: [],
-      wijk: '',
-      city: plaats || 'Nederland'
-    });
-  }
-  
-  return tryFullAddress()
-    .then(function(result){
-      if(result) return result;
-      return tryPlaceOnly();
-    })
-    .then(function(result){
-      if(result) return result;
-      return fallbackOriginal();
-    })
-    .then(function(bestResult){
-      if(!bestResult) return null;
-      
-      var label = bestResult.street;
-      if(bestResult.wijken.length > 0) {
-        label += ', ' + bestResult.wijken.join(', ');
-      }
-      if(bestResult.city) {
-        label += ', ' + bestResult.city;
-      }
-      
-      return {
-        lon: bestResult.lon,
-        lat: bestResult.lat,
-        label: label || q,
-        street: bestResult.street,
-        wijken: bestResult.wijken,
-        wijk: bestResult.wijk,
-        city: bestResult.city
+        lon: lon,
+        lat: lat,
+        label: label,
+        street: street,
+        wijken: wijken,
+        wijk: wijken.length > 0 ? wijken[0] : '',
+        city: city || 'Almere'
       };
     })
     .catch(function(err){
-      console.error('Nominatim error:', err);
-      var plaats = q.split(/\s+/).pop();
+      console.error('PDOK error:', err);
+      // Fallback: return original
       return {
-        lon: null,
-        lat: null,
+        lon: 5.2, lat: 52.1,
         label: q,
         street: q,
         wijken: [],
         wijk: '',
-        city: plaats || 'Nederland'
+        city: 'Almere'
       };
     });
 }
 
+// Fallback Nominatim (als PDOK faalt)
 function geocodeNominatim(q){
-  // Bepaal de plaats uit de query zelf (bijv. "ALMERE" uit "GRIENDENBRUG ALMERE")
-  var explicitPlaats = null;
-  var plaatsen = ['almere', 'amsterdam', 'rotterdam', 'den haag', 'utrecht', 'arnhem', 'nijmegen', 'leiden', 'haarlem', 'lelystad', 'dronten', 'zeewolde', 'emmeloord', 'marknesse', 'naarden', 'hoorn', 'groningen', 'leeuwarden', 'zwolle', 'kampen', 'deventer', 'apeldoorn', 'tilburg', 'breda', 'eindhoven', 'maastricht', 'heerlen', 'roermond', 'venlo', 'alkmaar', 'schagen', 'enkhuizen', 'volendam', 'edam', 'medemblik', 'meppel', 'assen', 'harlingen', 'sneek', 'workum', 'bolsward', 'franeker', 'dokkum', 'delft', 'zierikzee', 'middelburg', 'flushing', 'goes', 'vlissingen', 'wageningen', 'zevenaar', 'duiven', 'doetinchem', 'zutphen', 'winterswijk', 'lochem', 'groenlo', 'lichtenvoorde', 'nunspeet', 'harderwijk', 'barneveld', 'wezep'];
-  var qLower = q.toLowerCase();
-  for(var p=0; p<plaatsen.length; p++){
-    if(qLower.indexOf(plaatsen[p]) !== -1){
-      explicitPlaats = plaatsen[p];
-      break;
-    }
-  }
+  if(!q || q.trim().length < 2) return { lon: 5.2, lat: 52.1, label: 'Almere', street: '', wijken: [], wijk: '', city: 'Almere' };
   
-  // Standaard: Almere als niets anders genoemd
-  if(!explicitPlaats) explicitPlaats = 'almere';
+  var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=json&addressdetails=1&limit=5&bounded=0&zoom=14';
   
-  // Bouw viewbox voor de juiste plaats
-  var viewboxByPlace = {
-    'almere': '5.10,52.25,5.45,52.50',      // Almere strict
-    'amsterdam': '4.75,52.25,5.10,52.45',
-    'rotterdam': '4.25,51.85,4.65,52.05',
-    'den haag': '4.00,52.00,4.35,52.20',
-    'kerkdriel': '5.32,51.70,5.52,51.90',
-    'arnhem': '5.80,51.95,6.10,52.15',
-    'nijmegen': '5.80,51.80,6.05,52.00'
-  };
-  
-  var viewbox = viewboxByPlace[explicitPlaats] || viewboxByPlace['almere'];
-  
-  // Nominatim API call met STRICT bounding box
-  var url = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + 
-    '&format=json&limit=10&countrycodes=nl';
-  
-  url += '&viewbox=' + viewbox + '&bounded=1';  // STRICT!
-  
-  return fetch(url).then(function(r){ return r.json(); }).then(function(d){
-    if(!d || !d.length) return null;
-    
-    var doc = d[0];
-    if(!doc) return null;
-    
-    var lat = parseFloat(doc.lat);
-    var lon = parseFloat(doc.lon);
-    if(isNaN(lat) || isNaN(lon)) return null;
-    
-    // Bouw label op
-    var label = doc.name || '';
-    if(doc.address){
-      var addr = doc.address;
-      if(addr.road) label = (label ? label + ', ' : '') + addr.road;
-      if(addr.city) label = (label ? label + ', ' : '') + addr.city;
-      else if(addr.town) label = (label ? label + ', ' : '') + addr.town;
-    }
-    
-    return { lon: lon, lat: lat, label: label || q };
-  }).catch(function(err){ 
-    console.error('Nominatim geocode error:', err);
-    return null; 
-  });
+  return fetch(url)
+    .then(function(r){ return r.json(); })
+    .then(function(results){
+      if(!results || results.length === 0){
+        return {
+          lon: 5.2, lat: 52.1,
+          label: q,
+          street: q,
+          wijken: [],
+          wijk: '',
+          city: 'Almere'
+        };
+      }
+      
+      var res = results[0];
+      var addr = res.address || {};
+      
+      var street = addr.road || addr.footway || q;
+      var wijken = [];
+      if(addr.suburb) wijken.push(addr.suburb);
+      if(addr.district) wijken.push(addr.district);
+      
+      var city = addr.city || addr.town || addr.village || 'Almere';
+      
+      var label = street;
+      if(wijken.length > 0) label += ', ' + wijken.join(', ');
+      if(city) label += ', ' + city;
+      
+      return {
+        lon: parseFloat(res.lon),
+        lat: parseFloat(res.lat),
+        label: label,
+        street: street,
+        wijken: wijken,
+        wijk: wijken.length > 0 ? wijken[0] : '',
+        city: city
+      };
+    })
+    .catch(function(err){
+      console.error('Nominatim error:', err);
+      return {
+        lon: 5.2, lat: 52.1,
+        label: q,
+        street: q,
+        wijken: [],
+        wijk: '',
+        city: 'Almere'
+      };
+    });
 }
 
 /* Hectometeraanduiding herkennen, bv. "A6 102,7" of "N307 - HANZEWEG 102,7 DRONTEN" */
@@ -2228,190 +2057,82 @@ function schrijfUit(t){
     .replace(/\bAMBU\b/gi, 'Ambulance')
     .replace(/\s+/g,' ').trim();
 }
+document.getElementById('fireBtn').onclick=function(){
 function parseP2000(raw){
-  // SAVE ORIGINEEL BERICHT (MET ALLES!)
+  // SAVE ORIGINEEL
   var originalText = (raw||'').replace(/\s+/g,' ').trim();
+  var s = originalText;
   
-  var s=(raw||'').replace(/\s+/g,' ').trim();
-  var pm=s.match(/\bP\s*([12])\b/i) || s.match(/\bPRIO\s*([12])\b/i);
-  var prio=pm?parseInt(pm[1],10):selectedPrio;
-  var caps=s.match(/\d{6,7}/g)||[];
-  var kanaal='';
+  // STAP 1: Extract prioriteit
+  var pm = s.match(/\bP\s*([12])\b/i) || s.match(/\bPRIO\s*([12])\b/i);
+  var prio = pm ? parseInt(pm[1],10) : selectedPrio;
+  
+  // STAP 2: Extract kanaal (BMD-XX)
+  var kanaal = '';
   var km = s.match(/\bBMD[-\s]?(\d{1,2})\b/i);
   if(km) kanaal = 'Incidentkanaal ' + parseInt(km[1],10);
   
-  // SUBTYPES - ALTIJD BESCHIKBAAR!
-  var SUBTYPES = [
-    // BRAND/BRANDWEER
-    'BRAND', 'BR', 'BRANDTRAP', 'BRANDKRAAN', 'ROOK', 'BRANDEN', 'EXPLOSIE',
-    
-    // WONING/GEBOUWEN
-    'WONING', 'HUIS', 'GEBOUW', 'GARAGE', 'LOODS', 'KANTOOR', 'WINKEL', 'SCHUUR', 'BIJGEBOUW', 'BOERDERIJ', 'INDUSTRIE',
-    
-    // DIEREN
-    'DIER', 'WATER',
-    
-    // VOERTUIGEN
-    'AUTO', 'BUS', 'TREIN', 'FIETS', 'MOTOR', 'BROMMER', 'TRUCK', 'VRACHTAUTO', 'CAMPER', 'CARAVAN', 'VRACHTWAGEN', 'TANKER', 'AANHANGER', 'BUSJE', 'BESTELWAGEN', 'MINIBUS', 'TOURINGCAR', 'ZIEKENAUTO', 'WEGVERVOER',
-    
-    // VOERTUIG-GERELATEERD
-    'VOERTUIG', 'VOERTUIGEN', 'PERSONEN', 'GOEDEREN',
-    
-    // VERKEERS/ONGELUKKEN
-    'ONGEVAL', 'VERKEERSONGEVAL', 'BEKNELLING',
-    
-    // MEDISCHE/AMBULANCE
-    'AMBULANCE', 'AMBU', 'MEDISCHE', 'LETSEL', 'REANIMATIE', 'HARTAANVAL', 'VERLOSSING', 'STUIPING', 'VERGIFTIGING', 'VERBRANDING', 'OOGLETSEL', 'VERWONDING', 'VALLETJE', 'ONWEL', 'FLAUWTE', 'BEVALLEN', 'ZIEKELIJKE', 'OMSTANDIGHEDEN', 'INSLEEP', 'INTRANSPORT', 'POLYTRAUMA', 'ERNSTIG', 'AFHIJSEN',
-    
-    // ASSISTENTIE
-    'ASSISTENTIE', 'BUITENSLUITING',
-    
-    // LEKKAGES/WATER
-    'LEKKAGE', 'OVERSTROMING', 'WATEROVERLAST',
-    
-    // NATUUR/STORMEN
-    'STORM', 'BOOM',
-    
-    // BRAND-SOORTEN
-    'RIET', 'ELEKTRAKAST', 'CONTAINER', 'BRANDGERUCHT',
-    
-    // BEHEERSSYSTEMEN
-    'OMS', 'BEHEERSSYSTEEM', 'DETECTIE', 'SPRINKLER', 'NABLUSSEN', 'NACONTROLE',
-    
-    // STANK/OVERLAST
-    'STANK', 'HINDERING', 'LUCHT', 'GASLUCHT', 'HIND',
-    
-    // LOCATIE/SITUATIE
-    'BUITEN', 'BINNEN', 'BUITENAREA', 'BUITENRUIMTE', 'ONDERGRONDS', 'BOVENGRONDS', 'HOOGTE', 'ZEER', 'HOOG', 'KLEIN', 'KLEINE', 'MIDDEL', 'LICHTE', 'UITBR',
-    
-    // OPERATIONEEL
-    'HERBEZET', 'KAZERNEREN', 'HERBEZETTING', 'DIENSTVERLENING', 'INTREKKEN', 'ALARM',
-    
-    // TEAMS/SPECIALS
-    'TEAM', 'DIGITALE', 'VERKENNING', 'VE',
-    
-    // DIER IN PROBLEMEN
-    'PROBLEMEN',
-    
-    // ORGANISATIE/GEBOUW-TYPES (FILTER UIT ADRES!)
-    'GEZONDHEIDSZORG', 'ZIEKENHUIS', 'KLINIEK', 'LOCATIE', 'LOC', 'SCHOOL', 'KANTOOR', 'FABRIEK', 'FABR', 'BEDRIJF', 'BEDRIJVEN', 'CENTRUM', 'GGZ', 'POLITIE', 'GEMEENTEHUIS', 'LIBRARY', 'BIBLIOTHEEK', 'CULTUREEL', 'CULTUUR', 'MUSEUM', 'THEATER', 'RESTAURANT', 'CAFE', 'HOTEL', 'CAMPING', 'PARKEERGARAGE',
-    
-    // CONNECTOREN
-    'TE', 'NAAR', 'VAN', 'IN', 'OP', 'BIJ', 'AAN'
-  ];
-  var mid=s
-    .replace(/\bPRIO\s*[12]\b/i,'')
-    .replace(/\bP\s*[12]\b/i,'')
-    .replace(/\d{6,7}/g,'')
-    .replace(/\b[A-Za-z]{2,4}[-\s]?\d{1,2}\b/,'')   // meldkamer/regiocode
-    .replace(/\b[AN]\s?\d{1,3}\s+(RECHTS|LINKS|RECHTSBAAN|LINKSBAAN)\s*-\s*(?=[AN]\s?\d)/g, '$1 ')
-    .replace(/\s+/g,' ').trim();
+  // STAP 3: Extract units (6-7 cijfers)
+  var caps = s.match(/\d{6,7}/g) || [];
   
-  // SPLIT TYPE/ADDR HIER (voor schrijfUit filteren!)
-  var cleanMid = mid;  // Dit gebruiken voor split
+  // STAP 4: Verwijder prio, kanaal, units uit string
+  var work = s
+    .replace(/\bP\s*[12]\b/i, '')
+    .replace(/\bPRIO\s*[12]\b/i, '')
+    .replace(/\bBMD[-\s]?\d{1,2}\b/i, '')
+    .replace(/\d{6,7}/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
   
-  // SKIP - only transform type later
-  // mid = schrijfUit(mid);
-
-  // toevoeging(en) tussen haakjes horen bij de soort, niet bij het adres
-  var extras = [];
-  cleanMid = cleanMid.replace(/\(([^)]*)\)/g, function(m, inhoud){
-    if(inhoud && inhoud.trim()) extras.push(inhoud.trim());
-    return ' ';
-  }).replace(/\s+/g,' ').trim();
+  // STAP 5: Split work in TYPE en ADRES
+  var plaatsen = ['ALMERE', 'AMSTERDAM', 'ROTTERDAM', 'DEN HAAG', 'UTRECHT', 'ARNHEM', 'NIJMEGEN', 
+                  'GRONINGEN', 'LEEUWARDEN', 'ZWOLLE', 'APELDOORN', 'TILBURG', 'BREDA', 'EINDHOVEN',
+                  'MAASTRICHT', 'HAARLEM', 'LEIDEN', 'DRONTEN', 'ZEEWOLDE', 'EMMELOORD', 'NAARDEN', 'HOORN'];
   
-  // Vervang slashes door spaties (BERM/BOSSCHAGE → BERM BOSSCHAGE)
-  cleanMid = cleanMid.replace(/\//g, ' ').replace(/\s+/g, ' ').trim();
-
-  // PARSE VAN cleanMid
-  var allWords = cleanMid.split(/\s+/);
-  var allWordsUpper = allWords.map(function(w){ return w.toUpperCase(); });
+  var type = '';
+  var addr = '';
+  var words = work.split(/\s+/);
+  var typeEndIdx = -1;
   
-  // SKIP BR+BRAND dubbel
-  if(allWordsUpper[0] === 'BR' && allWordsUpper[1] === 'BRAND'){
-    allWords = allWords.slice(0, 1).concat(allWords.slice(2));
-    allWordsUpper = allWordsUpper.slice(0, 1).concat(allWordsUpper.slice(2));
-  }
-  
-  // LOOP: Zolang woorden in SUBTYPES staan = TYPE
-  var typeEndIndex = 0;
-  for(var i = 0; i < allWordsUpper.length; i++){
-    if(SUBTYPES.indexOf(allWordsUpper[i]) !== -1){
-      typeEndIndex = i + 1;  // Teller verder
-    } else {
-      break;  // STOP - woord is NIET in SUBTYPES
+  // Zoek EERSTE plaatsnaam
+  for(var i=0; i<words.length; i++){
+    if(plaatsen.indexOf(words[i].toUpperCase()) !== -1){
+      typeEndIdx = i;
+      break;
     }
   }
   
-  var type = allWords.slice(0, typeEndIndex).join(' ');
-  var addr = allWords.slice(typeEndIndex).join(' ');
-  
-  // SCHOON ADRES: Verwijder organisatie/locatie-woorden VOOR het echte adres
-  // Dit voorkomt dat "GGZ Centraal loc. kliniek 1 Boomgaardweg" alles als adres wordt gezien
-  var addrWords = addr.split(/\s+/);
-  var addrCleanedWords = [];
-  var foundStreet = false;  // Markers voor straatnamen
-  
-  for(var ai = 0; ai < addrWords.length; ai++){
-    var w = addrWords[ai];
-    
-    // Check of dit woord een straatnaam indicator is (eindigt op -weg, -straat, -laan, etc)
-    var isStreetName = w.match(/^[A-Za-z]+.*?(weg|straat|laan|pad|dorp|plein|singel|gracht|brug|steeg|gang|kade|kaai)$/i);
-    
-    if(isStreetName){
-      // GEVONDEN! Dit is een echte straatnaam - begin hier
-      foundStreet = true;
-      addrCleanedWords.push(w);
-    } else if(foundStreet){
-      // We hebben al een straat gevonden - voeg ALLES toe wat daarna komt
-      addrCleanedWords.push(w);
-    }
-    // Else: foundStreet=false en dit is geen straatnaam → SKIP dit woord!
+  if(typeEndIdx === -1){
+    // Geen plaatsnaam gevonden
+    type = work;
+    addr = 'Onbekend';
+  } else {
+    // Alles VOOR plaatsnaam = TYPE
+    type = words.slice(0, typeEndIdx).join(' ');
+    // Plaatsnaam EN daarna = ADRES
+    addr = words.slice(typeEndIdx).join(' ');
   }
   
-  addr = addrCleanedWords.join(' ').trim();
+  // Format type schoon
+  type = type
+    .replace(/\s+/g, ' ')
+    .replace(/\(\s*/g, '(')
+    .replace(/\s*\)/g, ')')
+    .trim();
   
-  // Fallback: als niets overblijft, gebruik origineel (minus type)
-  if(!addr) addr = allWords.slice(typeEndIndex).join(' ');
+  // Geocoding happens later in showAlarm (async)
   
-  // Dedupe extras
-  extras = extras.filter(function(v, i, a) { 
-    return a.indexOf(v) === i;
-  });
-  
-  // Extras toevoegen - EENMALIG
-  if(extras.length) {
-    var extraStr = extras.join(', ')
-      .replace(/\bGR\.?\b/gi, 'Grote')
-      .replace(/\bMIDDEL\b/gi, 'Middel')
-      .replace(/\bBR\b/gi, 'Brand')
-      .replace(/\bHV\.?\b/gi, 'Hulpverlening')
-      .replace(/\bKL\.?\b/gi, 'Klein')
-      .replace(/\bAMBU\b/gi, 'Ambulance')
-      .replace(/\s+/g, ' ')
-      .toLowerCase();
-    type = type + ' (' + extraStr + ')';
-  }
-  
-  // schrijfUit - EENMALIG
-  type = schrijfUit(type);
-  
-  // 3) Controleer of addr een lokale locatienaam bevat (LOCATIES_CONFIG)
-  var knownCoord = null;
-  if(addr && LOCATIES_CONFIG && LOCATIES_CONFIG.length > 0){
-    var addrLower = addr.toLowerCase();
-    for(var li=0; li<LOCATIES_CONFIG.length; li++){
-      if(addrLower.indexOf(LOCATIES_CONFIG[li].naam) !== -1){
-        // Gevonden! Sla coördinaten op
-        knownCoord = { lat: LOCATIES_CONFIG[li].coord[0], lon: LOCATIES_CONFIG[li].coord[1] };
-        break;
-      }
-    }
-  }
-  
-  return { prio:prio, type:type, addr:addr, units:caps.join(' '), mid:mid, kanaal:kanaal, coord:knownCoord, originalText:originalText };
+  return { 
+    originalText: originalText,
+    type: type, 
+    addr: addr, 
+    units: caps.join(' '), 
+    prio: prio, 
+    mid: '', 
+    kanaal: kanaal, 
+    coord: null
+  };
 }
-document.getElementById('fireBtn').onclick=function(){
   var raw=document.getElementById('fRaw').value.trim();
   if(!raw){document.getElementById('fRaw').focus();return;}
   var p=parseP2000(raw);
