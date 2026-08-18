@@ -110,7 +110,7 @@
   .idle{
     flex:1;display:flex;flex-direction:column;
     align-items:center;justify-content:flex-start;
-    gap:3vh;padding:11vh 2rem 2rem;
+    gap:3vh;padding:5vh 2rem 12rem;
   }
   
   .clock{
@@ -462,7 +462,15 @@
   @media(prefers-reduced-motion:reduce){
     *{transition:none!important}
   }
-.duty{font-size:2rem;font-weight:bold;color:#0b63b8;text-align:center;}
+.duty{font-size:1.7rem;font-weight:bold;color:#0b63b8;}
+.duty-container{
+  display:flex;align-items:center;justify-content:center;
+  gap:1.5rem;margin-bottom:2vh;
+}
+.ploeg-logo-duty{
+  height:1.7rem;width:auto;display:block;object-fit:contain;
+}
+.ploeg-logo-duty[src=""]{display:none}
 
 
 
@@ -508,7 +516,10 @@
 
   <!-- Rustweergave -->
   <section class="idle">
-    <div class="duty" id="dutyPloeg">—</div>
+    <div class="duty-container">
+      <img class="ploeg-logo-duty" id="ploegLogoDuty" src="" alt="Ploeg logo" />
+      <div class="duty" id="dutyPloeg">—</div>
+    </div>
     <div class="clock"><span id="hm">--:--</span><span class="sec" id="ss">:--</span></div>
     <div class="date" id="dateText">—</div>
     <div class="weather" id="weatherCard">
@@ -1041,6 +1052,14 @@ var alarmTick = null;
 var startCoords = { lat: START_COORDS.lat, lon: START_COORDS.lon };
 function pad2(n){ n = String(n); return n.length < 2 ? '0' + n : n; }
 
+/* Ploeg logo laden */
+function updatePloegLogo(){
+  var ploeg = currentPloeg(new Date());
+  var logoUrl = 'https://raw.githubusercontent.com/brwrooster/P2000-vk/main/image/ploeg-'+ploeg+'.PNG';
+  var logoDuty = document.getElementById('ploegLogoDuty');
+  if(logoDuty) logoDuty.src = logoUrl;
+}
+
 /* ================= Klok ================= */
 function tick(){
   var now = new Date();
@@ -1051,6 +1070,7 @@ function tick(){
   document.getElementById('dateText').textContent =
     now.toLocaleDateString('nl-NL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});
   if(now.getDay() !== taskDag) renderTasks();
+  updatePloegLogo();
 }
 setInterval(tick,1000); tick();
 
