@@ -65,6 +65,7 @@
 
   /* ---------- Topbalk ---------- */
   .topbar{
+    position:relative;
     display:flex;align-items:center;gap:.9rem;
     padding:2.2vh 3vw;
     border-bottom:1px solid #20304a;
@@ -323,8 +324,10 @@
   }
   #screen.is-alarm .screen-footer{opacity:0}
   .task-bar{
+    position:absolute;left:50%;top:50%;
+    transform:translate(-50%, -50%);
     display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
-    gap:.6rem 2.2vw;flex:1;margin:0 auto;
+    gap:.6rem 2.2vw;width:auto;white-space:nowrap;
     pointer-events:none;transition:opacity .3s;
   }
   .task-bar:empty{display:none}
