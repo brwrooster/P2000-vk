@@ -65,15 +65,13 @@
 
   /* ---------- Topbalk ---------- */
   .topbar{
-    position:relative;
-    display:flex;align-items:center;justify-content:center;
+    display:flex;align-items:center;gap:.9rem;
     padding:2.2vh 3vw;
     border-bottom:1px solid #20304a;
     flex:0 0 auto;
     transition:background .4s ease, border-color .4s ease;
   }
   .mark{
-    position:absolute;left:3vw;
     width:4.2vh;height:4.2vh;
     flex:0 0 auto;cursor:pointer;display:block;
     -webkit-tap-highlight-color:transparent;
@@ -95,8 +93,7 @@
   }
   .ploeg-logo[src=""]{display:none}
   .topbar .status{
-    position:absolute;right:3vw;
-    display:flex;align-items:center;gap:.55rem;
+    margin-left:auto;display:flex;align-items:center;gap:.55rem;
     color:#8395ad;font-size:1.5vh;
     font-family:'Roboto Mono',monospace;letter-spacing:.04em;
   }
@@ -327,7 +324,7 @@
   #screen.is-alarm .screen-footer{opacity:0}
   .task-bar{
     display:flex;flex-wrap:wrap;justify-content:center;align-items:center;
-    gap:.6rem 2.2vw;flex:0 0 auto;
+    gap:.6rem 2.2vw;flex:1;margin:0 auto;
     pointer-events:none;transition:opacity .3s;
   }
   .task-bar:empty{display:none}
