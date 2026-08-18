@@ -59,8 +59,9 @@
   }
   #screen{
     position:relative;
-    width:100vw;min-height:100vh;min-height:100dvh;
+    width:100vw;height:100vh;height:100dvh;
     display:flex;flex-direction:column;
+    overflow:hidden;
   }
 
   /* ---------- Topbalk ---------- */
@@ -108,7 +109,8 @@
 
   /* ---------- IDLE ---------- */
   .idle{
-    flex:1;display:flex;flex-direction:column;
+    flex:1 1 auto;min-height:0;overflow:hidden;
+    display:flex;flex-direction:column;
     align-items:center;justify-content:flex-start;
     gap:3vh;padding:5vh 2rem 12rem;
   }
@@ -462,13 +464,13 @@
   @media(prefers-reduced-motion:reduce){
     *{transition:none!important}
   }
-.duty{font-size:2vh;font-weight:bold;color:#0b63b8;}
+.duty{font-size:2.2vh;font-weight:bold;color:#0b63b8;}
 .duty-container{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:.4vh;margin-bottom:1.2vh;
+  gap:.6vh;margin-bottom:1.2vh;
 }
 .ploeg-logo-duty{
-  height:2.8vh;width:auto;display:block;object-fit:contain;
+  height:11vh;width:auto;display:block;object-fit:contain;
 }
 .ploeg-logo-duty[src=""]{display:none}
 
