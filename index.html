@@ -1676,6 +1676,21 @@ function loadRoute(dest){
   });
 }
 
+/* Eén plek voor route + aanrijtijden + kaart.
+   Route en ETA's gaan eerst: die werken ook als Leaflet hapert.
+   Elke stap in een eigen try/catch, zodat één fout niet de rest sloopt. */
+function geenRoute(){
+  document.getElementById('routeTime').textContent='n.b.';
+  document.getElementById('routeDist').textContent='n.b.';
+  document.getElementById('routeBadge').classList.remove('loading');
+}
+function zetBestemming(dest, unitList){
+  if(!dest || dest.lat == null || dest.lon == null){ geenRoute(); return; }
+  try { loadRoute(dest); } catch(e){ console.error('route mislukt:', e); geenRoute(); }
+  try { loadUnitETAs(unitList || [], dest); } catch(e){ console.error('ETA mislukt:', e); }
+  try { initMap(dest); } catch(e){ console.error('kaart mislukt:', e); }
+}
+
 /* ================= Kaart ================= */
 /* Huisje voor de kazerne, ster voor het incident */
 function huisIcoon(){
@@ -1812,9 +1827,7 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
     document.getElementById('incidentStreet').textContent=knownGeo.label;
     document.getElementById('incidentPlace').textContent='Almere';  // knownGeo is hardcoded Almere location
     lastAddr=addr;
-    initMap({lat:knownGeo.lat,lon:knownGeo.lon});
-    loadRoute({lat:knownGeo.lat,lon:knownGeo.lon});
-    loadUnitETAs(unitList,{lat:knownGeo.lat,lon:knownGeo.lon});
+    zetBestemming({lat:knownGeo.lat,lon:knownGeo.lon}, unitList);
   }else{
     /* ===== NIEUW: straat + plaats herkennen via PDOK (heel Nederland) =====
        De straatnaam staat in een P2000-regel altijd VOOR de plaatsnaam en
@@ -1900,9 +1913,7 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
         document.getElementById('incidentPlace').textContent=place;
         var wijkStr = (geo.wijken && geo.wijken.length > 0) ? ', ' + geo.wijken.join(', ') : '';
         lastAddr=lastAddr.match(/[AN]\d/) ? lastAddr : (street + wijkStr + ', ' + place);  // Snelweg behouden
-        initMap({lat:geo.lat,lon:geo.lon});
-        loadRoute({lat:geo.lat,lon:geo.lon});
-        loadUnitETAs(unitList,{lat:geo.lat,lon:geo.lon});
+        zetBestemming({lat:geo.lat,lon:geo.lon}, unitList);
       }else{
         // FALLBACK: Toon origineel adres uit de melding (geen hardcoded plaats -
         // moet voor heel Nederland kloppen). Laatste woord is vrijwel altijd de plaats.
@@ -1937,10 +1948,15 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
         lastAddr = straatRegel + ', ' + res.woonplaats;
 
         // 3) Kaart, route en aanrijtijden op de PDOK-coordinaten
-        if(res.coord){
-          initMap({lat:res.coord.lat, lon:res.coord.lon});
-          loadRoute({lat:res.coord.lat, lon:res.coord.lon});
-          loadUnitETAs(unitList, {lat:res.coord.lat, lon:res.coord.lon});
+        if(res.coord && res.coord.lat != null){
+          zetBestemming({lat:res.coord.lat, lon:res.coord.lon}, unitList);
+        }else{
+          // PDOK gaf geen centroide mee: alsnog coordinaten opzoeken,
+          // anders blijven kaart, route en ETA leeg
+          geocodePDOK(res.straat + ', ' + res.woonplaats).then(function(g){
+            if(g) zetBestemming({lat:g.lat, lon:g.lon}, unitList);
+            else standaardGeocodering();
+          }, function(){ standaardGeocodering(); });
         }
 
         // 4) Wijk + stadsdeel erbij zoeken via OpenStreetMap
@@ -1958,6 +1974,9 @@ function showAlarm(type,addr,prio,unitsStr,timeoutMs,geoHint,kanaal,originalText
           document.getElementById('incidentPlace').textContent = plaatsRegel;
           lastAddr = straatRegel + (w.wijk ? ', ' + w.wijk : '') + ', ' + plaatsRegel;
         });
+      }, function(err){
+        console.error('adresherkenning mislukt:', err);
+        standaardGeocodering();
       });
     }
   }
