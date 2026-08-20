@@ -957,9 +957,10 @@ function renderUnits(units){
     wrap.innerHTML = '<span class="chip unknown"><span class="name">Geen eenheden</span></span>';
     return;
   }
-  units.forEach(function(u){
+  units.forEach(function(u, idx){
     var el = document.createElement('div');
     el.className = 'chip ' + (u.known ? 'known' : 'unknown');
+    el.setAttribute('data-volgorde', idx);   /* oorspronkelijke volgorde bewaren */
     var n = document.createElement('span'); n.className='name'; n.textContent=u.name;
     var c = document.createElement('span'); c.className='cc'; c.textContent=u.code;
     el.appendChild(n); el.appendChild(c);
@@ -989,6 +990,30 @@ function loadUnitETAs(units, dest){
       var min = perPost[u.post];
       el.textContent = (min==null) ? 'n.b.' : (min + ' min');
     });
+    sorteerOpETA(perPost, units);
+  }
+
+  /* Zet de eenheden op volgorde van rijtijd: kortste bovenaan, langste onderaan.
+     Eenheden zonder bekende tijd zakken naar beneden, in hun oorspronkelijke volgorde. */
+  function sorteerOpETA(perPost, lijst){
+    var wrap = document.getElementById('unitChips');
+    if(!wrap) return;
+    var tijdPerCode = {};
+    lijst.forEach(function(u){
+      var m = u.post ? perPost[u.post] : null;
+      tijdPerCode[u.code] = (m==null) ? null : m;
+    });
+    var chips = Array.prototype.slice.call(wrap.children);
+    chips.sort(function(a, b){
+      var ca = a.querySelector('.cc'), cb = b.querySelector('.cc');
+      var ta = ca ? tijdPerCode[ca.textContent] : null;
+      var tb = cb ? tijdPerCode[cb.textContent] : null;
+      var va = (ta==null) ? Infinity : ta;
+      var vb = (tb==null) ? Infinity : tb;
+      if(va !== vb) return va - vb;
+      return (+a.getAttribute('data-volgorde')||0) - (+b.getAttribute('data-volgorde')||0);
+    });
+    chips.forEach(function(el){ wrap.appendChild(el); });
   }
 
   /* Terugval: OSRM (gewone auto) */
