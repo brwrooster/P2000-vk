@@ -295,6 +295,11 @@ async function takenAPI(request, env) {
       if (body.themeMode) {
         await env.CONFIG.put("themeMode", body.themeMode);
       }
+      // Sla apart op of de tellingen per ploeg getoond mogen worden.
+      // Let op: false is ook een geldige waarde, dus expliciet op type controleren.
+      if (typeof body.toonPloegTelling === "boolean") {
+        await env.CONFIG.put("toonPloegTelling", body.toonPloegTelling ? "1" : "0");
+      }
       return new Response(JSON.stringify({ ok: true }), { headers });
     }
     
@@ -302,10 +307,15 @@ async function takenAPI(request, env) {
     const opgeslagen = await env.CONFIG.get("taken");
     const tellingenRuw = await env.CONFIG.get("tellingen");
     const themeMode = await env.CONFIG.get("themeMode") || "auto";
+    const toonPloegTellingRuw = await env.CONFIG.get("toonPloegTelling");
     
     const data = opgeslagen ? JSON.parse(opgeslagen) : { tasks: null, capcodes: [], posts: {}, units: {}, holdMin: 5 };
     data.tellingen = tellingenRuw ? actualiseerTellingenVoorWeergave(JSON.parse(tellingenRuw)) : null;
     data.themeMode = themeMode;
+    // Niets opgeslagen = standaard aan
+    data.toonPloegTelling = (toonPloegTellingRuw === null || toonPloegTellingRuw === undefined)
+      ? true
+      : (toonPloegTellingRuw === "1");
     
     return new Response(JSON.stringify(data), { headers });
   } catch (e) {

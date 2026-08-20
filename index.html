@@ -24,6 +24,10 @@
     --prio2:#ffc400;
     --accent:#3ec1ff;
     --ok:#37d67a;
+    /* Eén kleur voor ALLE tekst op het rustscherm. Pas alleen deze regel aan
+       als je de rusttekst een andere kleur wilt geven. */
+    --rust-tekst:#8395ad;
+    --rust-tekst-dag:#5a6b80;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;height:100dvh}
@@ -40,10 +44,10 @@
   body.dag #screen 
   body.dag #screen .clock{color:#1a2433}
   body.dag #screen .clock .sec{color:#0b63b8}
-  body.dag #screen .date{color:#5a6b80}
-  body.dag #screen .weather .temp{color:#1a2433}
-  body.dag #screen .weather .cond{color:#1a2433}
-  body.dag #screen .weather .wind{color:#5a6b80}
+  body.dag #screen .date{color:var(--rust-tekst-dag)}
+  body.dag #screen .weather .temp{color:var(--rust-tekst-dag)}
+  body.dag #screen .weather .cond{color:var(--rust-tekst-dag)}
+  body.dag #screen .weather .wind{color:var(--rust-tekst-dag)}
   body.dag #screen 
   body.dag .task-bar .task{color:#3c4c60}
   body.dag .task-bar .task::before{background:#0b63b8}
@@ -125,21 +129,21 @@
   .date{
     font-family:'Oswald',sans-serif;font-weight:400;
     text-transform:uppercase;letter-spacing:.22em;
-    color:#8395ad;font-size:2.4vh;
+    color:var(--rust-tekst);font-size:2.4vh;
   }
   .weather{
     display:flex;align-items:center;gap:2.2vw;
-    color:#8395ad;flex-wrap:wrap;justify-content:center;
+    color:var(--rust-tekst);flex-wrap:wrap;justify-content:center;
   }
   .weather .glyph{font-size:4vh;line-height:1}
   .weather .temp{
-    font-family:'Roboto Mono',monospace;font-weight:500;color:#eaf1fa;
+    font-family:'Roboto Mono',monospace;font-weight:500;color:var(--rust-tekst);
     font-size:4vh;line-height:1;
   }
   .weather .wx-meta{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap}
-  .weather .cond{font-size:2.2vh;font-weight:500;color:#eaf1fa}
+  .weather .cond{font-size:2.2vh;font-weight:500;color:var(--rust-tekst)}
   .weather .wind{
-    color:#8395ad;font-size:1.7vh;
+    color:var(--rust-tekst);font-size:1.7vh;
     font-family:'Roboto Mono',monospace;letter-spacing:.02em;
   }
   .weather .sep{display:none}
@@ -156,19 +160,19 @@
     min-width:0;text-align:center;
   }
   .stats-row .stat-label{
-    color:#5a6b80;font-family:'Roboto Mono',monospace;
+    color:var(--rust-tekst);font-family:'Roboto Mono',monospace;
     font-size:1.1vh;letter-spacing:.12em;text-transform:uppercase;
     margin-bottom:.3rem;
   }
   .stats-row .stat-value{
-    color:#8395ad;
+    color:var(--rust-tekst);
     font-family:'Roboto Mono',monospace;letter-spacing:.02em;
     font-size:1.7vh;white-space:nowrap;
   }
   .stats-row:empty{display:none}
 
   .ploegen-kop{
-    text-align:center;color:#4a5a70;
+    text-align:center;color:var(--rust-tekst);
     font-family:'Roboto Mono',monospace;font-size:1.05vh;
     letter-spacing:.14em;text-transform:uppercase;margin-top:.9rem;
   }
@@ -180,10 +184,10 @@
   .ploegen-row .ploeg-item{
     display:flex;align-items:baseline;gap:.4rem;
     font-family:'Roboto Mono',monospace;font-size:1.25vh;
-    color:#5a6b80;letter-spacing:.03em;
+    color:var(--rust-tekst);letter-spacing:.03em;
   }
   .ploegen-row .ploeg-item .naam{
-    font-weight:500;color:#8395ad;
+    font-weight:500;color:var(--rust-tekst);
   }
   .ploegen-row:empty{display:none}
 
@@ -196,7 +200,7 @@
   .ticker-track{
     display:inline-block;white-space:nowrap;
     font-family:'Roboto Mono',monospace;font-size:1.95vh;letter-spacing:.03em;
-    color:#5a6b80;padding-left:100%;
+    color:var(--rust-tekst);padding-left:100%;
     animation:ticker-scroll 60s linear infinite;
   }
   .ticker-track:empty{animation:none}
@@ -468,7 +472,7 @@
   @media(prefers-reduced-motion:reduce){
     *{transition:none!important}
   }
-.duty{font-size:2.2vh;font-weight:bold;color:#0b63b8;}
+.duty{font-size:2.2vh;font-weight:bold;color:var(--rust-tekst);}
 .duty-container{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
   gap:.6vh;margin-bottom:1.2vh;
@@ -670,6 +674,12 @@
         <label><input type="radio" name="themeMode" value="nacht"> Nacht</label>
       </div>
     </div>
+    <div class="field">
+      <label>Tellingen per ploeg</label>
+      <div style="padding:0.8rem 0;">
+        <label><input type="checkbox" id="cfgPloegTelling" checked> Toon "Totaal meldingen per ploeg" onderaan het rustscherm</label>
+      </div>
+    </div>
     <div class="tp-actions">
       <button class="btn primary" id="cfgSave">Opslaan</button>
       <button class="btn ghost" id="cfgReset">Standaard herstellen</button>
@@ -727,6 +737,7 @@ var HOLD_MIN = DEFAULT_HOLD_MIN;
 var TASKS = DEFAULT_TASKS.slice();
 var POST_CAPCODES = [];
 var THEME_MODE = 'auto';  // 'auto', 'dag', 'nacht'
+var TOON_PLOEGTELLING = true;  // tellingen per ploeg onderaan het rustscherm tonen
 
 function refreshPostCapcodes(){
   POST_CAPCODES = [];
@@ -748,6 +759,7 @@ function loadCfg(){
     if(cfg.holdMin) HOLD_MIN = cfg.holdMin;
     if(cfg.tasks) TASKS = normaliseerTaken(cfg.tasks);
     if(cfg.themeMode) THEME_MODE = cfg.themeMode;
+    if(typeof cfg.toonPloegTelling === 'boolean') TOON_PLOEGTELLING = cfg.toonPloegTelling;
   }
   refreshPostCapcodes();
 }
@@ -775,7 +787,8 @@ function saveCfg(){
   try{
     localStorage.setItem('p2000_cfg', JSON.stringify({
       capcodes: FILTER_CAPCODES, posts: POSTS, units: UNITS,
-      holdMin: HOLD_MIN, tasks: TASKS, themeMode: THEME_MODE
+      holdMin: HOLD_MIN, tasks: TASKS, themeMode: THEME_MODE,
+      toonPloegTelling: TOON_PLOEGTELLING
     }));
   }catch(e){}
 }
@@ -849,6 +862,11 @@ function haalTakenCentraal(){
         if(telU){ UNITS = d.units; gewijzigd = true; }
       }
       if(d.holdMin){ HOLD_MIN = d.holdMin; gewijzigd = true; }
+      // Tellingen per ploeg wel/niet tonen (centraal ingesteld)
+      if(typeof d.toonPloegTelling === 'boolean' && d.toonPloegTelling !== TOON_PLOEGTELLING){
+        TOON_PLOEGTELLING = d.toonPloegTelling;
+        gewijzigd = true;
+      }
       // Tellingen laden en weergeven
       if(d.tellingen){
         renderTellingen(d.tellingen);
@@ -872,7 +890,8 @@ function bewaarTakenCentraal(){
       posts: POSTS,
       units: UNITS,
       holdMin: HOLD_MIN,
-      themeMode: THEME_MODE
+      themeMode: THEME_MODE,
+      toonPloegTelling: TOON_PLOEGTELLING
     })
   }).then(function(r){
     return r.json().then(function(d){
@@ -1249,8 +1268,10 @@ window.addEventListener('offline',function(){ setConn(false); });
 setConn(navigator.onLine);
 
 /* ================= Laatste uitruk + tellingen ================= */
+var LAATSTE_TELLINGEN = null;
 /* Tellingen (dienst + jaar), komen mee met de taken-poll (zelfde 20-seconden-cyclus) */
 function renderTellingen(tellingen){
+  if(tellingen) LAATSTE_TELLINGEN = tellingen;   // bewaren om direct te kunnen verversen
   var dienstEl = document.getElementById('statDienst');
   var jaarEl = document.getElementById('statJaar');
   var ploegenEl = document.getElementById('ploegenRow');
@@ -1278,10 +1299,17 @@ function renderTellingen(tellingen){
       return { naam: naam, aantal: j[naam] || 0 };
     });
 
-    var html = lijst.map(function(p){
-      return '<span class="ploeg-item"><span class="naam">'+p.naam+'-ploeg</span><span>'+p.aantal+'</span></span>';
-    }).join('');
-    ploegenEl.innerHTML = html;
+    if(TOON_PLOEGTELLING){
+      var html = lijst.map(function(p){
+        return '<span class="ploeg-item"><span class="naam">'+p.naam+'-ploeg</span><span>'+p.aantal+'</span></span>';
+      }).join('');
+      ploegenEl.innerHTML = html;
+    }else{
+      /* Uitgezet in het instellingenmenu: kop en rij leegmaken.
+         De :empty-regels in de CSS zorgen dan dat er niets te zien is. */
+      ploegenKop.textContent = '';
+      ploegenEl.innerHTML = '';
+    }
   }
   renderMeldingenLijst(tellingen.dienst);
 }
@@ -2128,6 +2156,10 @@ function openCfg(){
   for(var i=0; i<themeRadios.length; i++){
     themeRadios[i].checked = (themeRadios[i].value === THEME_MODE);
   }
+
+  // Zet het vinkje voor de ploegtellingen
+  var cbTel = document.getElementById('cfgPloegTelling');
+  if(cbTel) cbTel.checked = !!TOON_PLOEGTELLING;
   
   vulTaakEditor();  document.getElementById('cfgMsg').textContent = 'Instellingen gelden voor alle schermen.';
   cfgPanel.classList.add('open');
@@ -2152,6 +2184,10 @@ document.getElementById('cfgSave').onclick=function(){
       if(themeRadios[i].checked){ THEME_MODE = themeRadios[i].value; break; }
     }
 
+    // Lees het vinkje voor de ploegtellingen in
+    var cbTel = document.getElementById('cfgPloegTelling');
+    if(cbTel) TOON_PLOEGTELLING = !!cbTel.checked;
+
     FILTER_CAPCODES=caps;
     HOLD_MIN=(!isNaN(hold)&&hold>0)?hold:DEFAULT_HOLD_MIN;
     var telP=0,k; for(k in p){ if(p.hasOwnProperty(k)) telP++; }
@@ -2167,13 +2203,15 @@ document.getElementById('cfgSave').onclick=function(){
     saveCfg();  // Eerst lokaal opslaan - dit lukt altijd
     try{ pasThemaToe(); }catch(e1){ console.error('pasThemaToe:', e1); }
     try{ renderTasks(); }catch(e2){ console.error('renderTasks:', e2); }
+    try{ renderTellingen(LAATSTE_TELLINGEN); }catch(e3){ console.error('renderTellingen:', e3); }
 
     // Samenvatting van wat er is opgeslagen
     var overzicht = caps.length+' capcode'+(caps.length===1?'':'s')
       + ', '+telP+' post'+(telP===1?'':'en')
       + ', '+telU+' voertuig'+(telU===1?'':'en')
       + ', '+tks.length+' ta'+(tks.length===1?'ak':'ken')
-      + ', melding blijft '+HOLD_MIN+' min staan, thema: '+THEME_MODE;
+      + ', melding blijft '+HOLD_MIN+' min staan, thema: '+THEME_MODE
+      + ', ploegtellingen: '+(TOON_PLOEGTELLING?'aan':'uit');
 
     msg.textContent='Lokaal opgeslagen ('+overzicht+'). Nu naar de server…';
 
@@ -2203,10 +2241,12 @@ document.getElementById('cfgReset').onclick=function(){
   POSTS=DEFAULT_POSTS; UNITS=DEFAULT_UNITS; HOLD_MIN=DEFAULT_HOLD_MIN;
   TASKS=DEFAULT_TASKS.slice();
   THEME_MODE='auto';
+  TOON_PLOEGTELLING=true;
   refreshPostCapcodes();
   try{ localStorage.removeItem('p2000_cfg'); }catch(e){}
   renderTasks();
   pasThemaToe();
+  renderTellingen(LAATSTE_TELLINGEN);
   openCfg();
   document.getElementById('cfgMsg').textContent='Standaardinstellingen hersteld.';
 };
