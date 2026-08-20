@@ -307,6 +307,7 @@
   .route-badge .v{
     font-family:'Roboto Mono',monospace;font-weight:700;
     font-size:3.8vh;line-height:1;
+    color:#3ec1ff;   /* rijtijd, afstand en windrichting in dezelfde kleur */
   }
   .route-badge .v.time{color:#3ec1ff}
   .route-badge .vsep{width:1px;background:#20304a}
@@ -1097,7 +1098,20 @@ var routeBounds=null, mapObserver=null;
 function fitToRoute(){
   if(!map||!routeBounds) return;
   map.invalidateSize();
-  map.fitBounds(routeBounds,{padding:[18,18],maxZoom:16});
+  /* De route-badge (rijtijd/afstand/wind) ligt linksboven óp de kaart.
+     Op een liggend TV-scherm is het kaartvlak laag, waardoor het eindpunt
+     anders achter die badge verdwijnt. Daarom extra ruimte bovenaan,
+     gebaseerd op de werkelijke hoogte van de badge. */
+  var badge = document.getElementById('routeBadge');
+  var bovenMarge = 40;
+  if(badge && badge.offsetHeight){
+    bovenMarge = badge.offsetHeight + 26;
+  }
+  map.fitBounds(routeBounds,{
+    paddingTopLeft:[26, bovenMarge],
+    paddingBottomRight:[26, 26],
+    maxZoom:16
+  });
 }
 var alarmTimer = null;
 var alarmTick = null;
@@ -1618,6 +1632,8 @@ function toonRoute(minuten, kilometers, latlngs){
   routeBounds=routeLine.getBounds();
   fitToRoute();
   setTimeout(fitToRoute,250);
+  setTimeout(fitToRoute,900);
+  setTimeout(fitToRoute,2000);
 }
 
 /* Terugval: OSRM (gewone auto, dus zonder busbanen) */
