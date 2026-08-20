@@ -1282,81 +1282,6 @@ function renderMeldingenLijst(dienst){
   track.textContent = tekst;
 }
 
-/* ================= Live feed (112-nu, via de Worker) ================= */
-var lastFeedId = null;
-function parseFeed(item){
-  // 112-nu: de omschrijving is de volledige P2000-regel; anders de titel
-  var src = (item.desc && item.desc.trim()) ? item.desc : (item.title||'');
-  var resultaat = parseP2000(src);
-  resultaat.raw = src; // de ONGESCHOONDE tekst, nodig om later correct te kunnen herparsen
-  return resultaat;
-}
-function matchtCapcode(item){
-  var tekst = (item.desc || '') + ' ' + (item.title || '');
-  for(var i=0;i<POST_CAPCODES.length;i++){
-    var c = POST_CAPCODES[i];
-    if(!c) continue;
-    if(tekst.indexOf(c) !== -1) return true;
-  }
-  return false;
-}
-var firstPoll = true;
-var laatstGeloefdeBronIds = {}; // Cache voor vermijden duplicate logging
-function pollFeed(){
-  fetch('/api/melding',{cache:'no-store'}).then(function(r){ return r.json(); }).then(function(d){
-    setConn(!d.error);
-    var lijst = d.meldingen || [];
-    var m = null;
-    for(var i=0;i<lijst.length;i++){
-      if(matchtCapcode(lijst[i])){ m = lijst[i]; break; }
-    }
-    if(m && m.id !== lastFeedId){
-      var ageMs = m.pub ? (Date.now() - new Date(m.pub).getTime()) : 0;
-      var recent = ageMs >= 0 && ageMs < 20*60*1000;
-      lastFeedId = m.id;
-      // bij openen alleen tonen als recent; daarna elke echt nieuwe melding
-      if(!firstPoll || recent){
-        var p = parseFeed(m);
-        
-        // Controleer of we deze bronId al hebben gelogd (voorkomen duplicates)
-        if(!laatstGeloefdeBronIds[m.id]){
-          showAlarm(p.type, p.addr, p.prio, p.units, HOLD_MIN*60*1000, p.mid, p.kanaal, p.originalText);
-          // Log naar server - ORIGINELE MELDING (met voertuignummers!)
-          var meldingtekst = p.originalText || p.raw || (p.type + ' ' + p.addr);  // Fallback if missing
-          fetch('/api/pi', {
-            method: 'POST',
-            headers: {'content-type': 'application/json'},
-            body: JSON.stringify({
-              text: meldingtekst,
-              sleutel: 'veluwsekant2026',
-              bronId: m.id,
-              test: false
-            })
-          }).catch(function(e){ console.log('Log fout:', e); });
-          
-          // Markeer als gelogd
-          laatstGeloefdeBronIds[m.id] = true;
-        }
-      }
-    }
-    firstPoll = false;
-  }).catch(function(e){ setConn(false); });
-}
-setInterval(pollFeed, 10000);
-pollFeed();
-
-/* Feed-melding (112-nu) laten meetellen bij de dienst/jaar-statistieken.
-   bronId (het unieke feed-item-id) voorkomt dat meerdere open schermen
-   dezelfde melding elk apart laten meetellen - de Worker telt 'm maar één keer. */
-function meldFeedVoorTelling(ruweTekst, bronId){
-  if(!ruweTekst || !bronId) return;
-  fetch('/api/pi',{
-    method:'POST',
-    headers:{'content-type':'application/json'},
-    body: JSON.stringify({ text: ruweTekst, sleutel: 'veluwsekant2026', bronId: 'feed-'+bronId })
-  }).catch(function(){ /* telling niet gelukt: geen probleem, scherm blijft werken */ });
-}
-
 /* ===== Eigen ontvanger (Raspberry Pi, seriële poort) — heeft voorrang ===== */
 var lastPiId = null;
 var eersteP2000Poll = true;
@@ -2217,7 +2142,6 @@ document.getElementById('cfgSave').onclick=function(){
     saveCfg();  // Eerst lokaal opslaan - dit lukt altijd
     try{ pasThemaToe(); }catch(e1){ console.error('pasThemaToe:', e1); }
     try{ renderTasks(); }catch(e2){ console.error('renderTasks:', e2); }
-    lastFeedId=null; firstPoll=true;
 
     // Samenvatting van wat er is opgeslagen
     var overzicht = caps.length+' capcode'+(caps.length===1?'':'s')
