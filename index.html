@@ -49,11 +49,11 @@
   body.dag #screen .weather .cond{color:var(--rust-tekst-dag)}
   body.dag #screen .weather .wind{color:var(--rust-tekst-dag)}
   body.dag #screen 
-  body.dag .task-bar .task{color:#3c4c60}
+  body.dag .task-bar .task{color:var(--rust-tekst-dag)}
   body.dag .task-bar .task::before{background:#0b63b8}
-  body.dag .brand-credit{color:#5a6b80}
-  body.dag .source-credit{color:#7a8798}
-  body.dag .source-credit a{color:#7a8798}
+  body.dag .brand-credit{color:var(--rust-tekst-dag)}
+  body.dag .source-credit{color:var(--rust-tekst-dag)}
+  body.dag .source-credit a{color:var(--rust-tekst-dag)}
   body{
     background:#0a0f1a;
     color:#eaf1fa;
@@ -193,13 +193,13 @@
 
   .ticker-wrap{
     width:100%;overflow:hidden;margin-top:1.1rem;
-    -webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
-    mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);
+    -webkit-mask-image:linear-gradient(90deg,transparent,#000 2%,#000 98%,transparent);
+    mask-image:linear-gradient(90deg,transparent,#000 2%,#000 98%,transparent);
   }
   .ticker-wrap:empty{display:none}
   .ticker-track{
     display:inline-block;white-space:nowrap;
-    font-family:'Roboto Mono',monospace;font-size:1.95vh;letter-spacing:.03em;
+    font-family:'Roboto Mono',monospace;font-size:2.6vh;letter-spacing:.03em;
     color:var(--rust-tekst);padding-left:100%;
     animation:ticker-scroll 60s linear infinite;
   }
@@ -353,24 +353,24 @@
   #screen.is-alarm ~ .task-bar{opacity:0}
   .task-bar .task{
     display:flex;align-items:center;gap:.5rem;
-    color:#8395ad;font-size:2.9vh;letter-spacing:.02em;
+    color:var(--rust-tekst);font-size:2.9vh;letter-spacing:.02em;
   }
   .task-bar .task::before{
     content:'';width:.45rem;height:.45rem;border-radius:50%;
-    background:#3ec1ff;opacity:.8;flex:0 0 auto;
+    background:#3ec1ff;flex:0 0 auto;
   }
   .source-credit{
     font-family:'Inter',sans-serif;font-size:.85vh;font-weight:500;
-    letter-spacing:.03em;color:#8395ad;opacity:.45;
+    letter-spacing:.03em;color:var(--rust-tekst);
   }
-  .source-credit a{color:#8395ad;text-decoration:none;pointer-events:auto}
+  .source-credit a{color:var(--rust-tekst);text-decoration:none;pointer-events:auto}
   .source-credit a:hover{text-decoration:underline}
   .brand-credit{
-    color:#a8b6c9;opacity:.85;
+    color:var(--rust-tekst);
     font-family:'Inter',sans-serif;font-size:.85vh;font-weight:600;
     letter-spacing:.04em;line-height:1.5;
   }
-  .brand-credit .mail{opacity:.8;font-weight:500}
+  .brand-credit .mail{font-weight:500}
 
   #testPanel, #cfgPanel{
     position:fixed;inset:auto 0 0 0;z-index:1001;
