@@ -703,7 +703,7 @@ var TEST_URL = "";  // URL van de TESTversie (waar de logo-klik op de live-pagin
 var IS_LIVE = false;
 
 /* ===== Standaardinstellingen (te overschrijven via het verborgen menu) ===== */
-var DEFAULT_CAPCODES = ["0700140", "0700143"]; // postcapcodes waarop gefilterd wordt
+var DEFAULT_CAPCODES = ["000700140", "000700143"]; // postcapcodes waarop gefilterd wordt
 var DEFAULT_POSTS = {
   veluwsekant: { naam:'Veluwsekant', lat:52.356938, lon:5.247188 },
   poort:       { naam:'Poort',       lat:52.353063, lon:5.171188 },
@@ -2187,7 +2187,7 @@ document.getElementById('cfgSave').onclick=function(){
   try{
     msg.textContent='Bezig met opslaan…';
 
-    var caps=document.getElementById('cfgCaps').value.match(/\d{4,7}/g)||[];
+    var caps=document.getElementById('cfgCaps').value.match(/\d{4,9}/g)||[];
     if(!caps.length){ msg.textContent='Let op: vul minstens één capcode in.'; return; }
 
     var hold=parseInt(document.getElementById('cfgHold').value,10);
